@@ -1,0 +1,135 @@
+/* vim: set syntax=magma : */
+/*
+    TODO
+        - update CCO -> ResidueReflexFieldCondition in examples below.
+        - check only ST for AlmOrd ?
+        - IsRamified ?
+        - new create AbelianVariety with input : isogeny class , frac ideal or ZBasis, CM-type satisfying ST
+        - add ComputeIsomorphismClassesAlmostOrdinary ?
+        - IsPrincipallyPolarized for AlmOrd ?
+        
+*/
+    
+/////////////////////////////////
+// Example
+/////////////////////////////////
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/AlmOrd.m");
+
+
+
+    _<x>:=PolynomialRing(Integers());
+    f:=x^6 - 11*x^5 + 65*x^4 - 240*x^3 + 585*x^2 - 891*x + 729;
+    If:=IsogenyClass(f:Check:=false);
+    If;
+    q:=FiniteField(If);
+    If`pRank:=3; //to ass the ordinary test
+    R:=ZFVOrder(If);
+    L:=Algebra(R);
+    oo:=FindOverOrders(R);
+    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If,oo);
+    O:=MaximalOrder(L);
+    [ Index(O,S) : S in oo ];
+    [ Index(O,S) : S in oo_max_at_ss ];
+    iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
+    assert IsRamified(Lss); // we are in the ramified case: this means there is a 1-1 map between AVs and ideals
+
+    all_cm:=AllCMTypes(If);
+    rrc,st:=CCO(q,[CMPosElt(PHI) : PHI in all_cm]);
+    assert &and(rrc); //since we can lift, all cm types should satisfy rrc;
+    cms:=[ all_cm[i] : i in [1..#all_cm] | rrc[i] and st[i] ];
+    assert #cms eq 2; // only 2 cm-types should satisfy st
+    PHI:=cms[1]; // both cm types satisfying ST will give the same answer
+                 // since we are in the ramified case
+    for isoS in iso do
+        for I in isoS do
+            _,pps:=IsPrincipallyPolarized(I,PHI);
+            #pps;
+        end for;
+    end for;
+
+/////////////////////////////////
+// Example
+/////////////////////////////////
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    load "~/230_CCO/functions.txt";
+    _<x>:=PolynomialRing(Integers());
+    f:=(x^2 + 9)*(x^4 - 6*x^3 + 19*x^2 - 54*x + 81);
+    If:=IsogenyClass(f:Check:=false);
+    If;
+    q:=FiniteField(If);
+    If`pRank:=3; //to ass the ordinary test
+    R:=ZFVOrder(If);
+    L:=Algebra(R);
+    oo:=FindOverOrders(R);
+    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If,oo);
+    O:=MaximalOrder(L);
+    [ Index(O,S) : S in oo ];
+    [ Index(O,S) : S in oo_max_at_ss ];
+    iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
+    assert not IsRamified(Lss); // we are in the inert case: this means there is a 2-1 map between AVs and ideals
+
+    all_cm:=AllCMTypes(If);
+    rrc,st:=CCO(q,[CMPosElt(PHI) : PHI in all_cm]);
+    assert &and(rrc); //since we can lift, all cm types should satisfy rrc;
+    cms:=[ all_cm[i] : i in [1..#all_cm] | rrc[i] and st[i] ];
+    assert #cms eq 2; // only 2 cm-types should satisfy st
+    for PHI in cms do
+        for isoS in iso do
+            for I in isoS do
+                _,pps:=IsPrincipallyPolarized(I,PHI);
+                #pps;
+            end for;
+        end for;
+    end for;
+
+/////////////////////////////////
+// Example 5.11
+/////////////////////////////////
+//TODO
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    load "~/230_CCO/functions.txt";
+   
+    _<x>:=PolynomialRing(Integers());
+    f:=x^6 - x^5 + 6*x^4 - 6*x^3 + 18*x^2 - 9*x + 27;
+    If:=IsogenyClass(f);
+    If;
+    q:=FiniteField(If);
+    pRank(If);
+    If`pRank:=3; //to overrule some asserts in the code which at the moment requires Ordinary
+    R:=ZFVOrder(If);
+    L:=Algebra(R);
+    oo:=FindOverOrders(R);
+    O:=MaximalOrder(L);
+    "there is only one non-maximal order of index coprime to p"; 
+    S:=[T : T in oo | IsCoprime(Index(O,T),q) ][1];
+    US,uS:=UnitGroup2(S);
+    USr:=TotallyRealUnitGroup(S);
+    gens_USr:=[USr.i@uS : i in [1..Ngens(USr)]]; 
+    for T in oo do
+        "index =",Index(O,T);
+        "IsGorenstein =",IsGorenstein(T);
+        "# classes with End=T =",#PicardGroup(T);
+        UT,uT:=UnitGroup2(T);
+        UTr:=TotallyRealUnitGroup(T); 
+        "does Theorem 5.5.1 hold?",USr subset UTr;
+        Tau:=[ u@uT : u in Transversal(UT,sub<UT|[ UT.i*(ComplexConjugate(UT.i@uT))@@uT : i in [1..Ngens(UT)] ]>)];
+        "does Theorem 5.5.2 hold?",forall{ g : g in gens_USr | exists{ u : u in Tau | IsTotallyRealPositive(g/u) }};
+        "\n";
+    end for;
+    all_cm:=AllCMTypes(If);
+    for T in oo do
+        "\nindex of End =",Index(O,T);
+        for A in ComputeIsomorphismClassesWithEndomorphismRing(If,T) do
+            "new isomorphism class";
+            printf "princ. pols. for each CM-type : ";
+            for PHI in all_cm do
+                _,pp:=IsPrincipallyPolarized(A,PHI);
+                printf "%o ",#pp;
+            end for;
+            printf "\n";
+        end for;
+    end for;
