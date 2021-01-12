@@ -82,10 +82,10 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
         until go;
 
         fac:=[ g[1] : g in Factorization(hp) ];
-        // N:=LocalField(FieldOfFractions(ChangePrecision(Zp,20*prec)),np);
         N:=LocalField(FieldOfFractions(Zp),np);
         rootM_inN:=Roots(DefiningPolynomial(M),N)[1,1];          // sometimes the precision is not enough ?
-        /* alternative to force higher precision. I don't like it.
+        /* 
+            // alternative to force higher precision. I don't like it.
             N0:=LocalField(FieldOfFractions(ChangePrecision(Zp,2*prec)),np); // this is defined to force a higher precision 
                                                                              // in the computation of eps below...
                                                                              // it is weird and I don't like it.
@@ -123,6 +123,20 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
         end for;
         pow_bas_L:=[FL^(i-1) : i in [1..Degree(h)]];
         refl_fields:=[];
+
+        // (early exit on N)
+        // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
+        // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
+        // the reflex fields.
+        // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
+        // which is the bottleneck of function. In particular refl_fields will be left empty
+        if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
+            compute_reflex_fields:=false;
+            all_rrc:=[ true : i in [1..#bs] ];
+        else 
+            compute_reflex_fields:=true;
+        end if;
+compute_reflex_fields;
         for b in bs do
             assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*FL^(i-1) : i in [1..Degree(h)]];
             rtsM_PHI:=[];
@@ -139,13 +153,16 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
                 //            iff bM=sum b_k phi_0(pi_j) in rtsM_PHI. 
             end for;
             assert #rtsM_PHI eq Degree(h) div 2;
-            ////////////////----RRC pAdic ----///////////////////
-            h_fac:=[ hi[1] : hi in Factorization(h)];
-            gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
-            gens_E:=[ eps(g) : g in gens_E_inM ];
-            E:=sub< N | gens_E >; //sometimes it seems to crash...
-            rrc:=(Ilog(p,q)) mod Ilog(p,#ResidueClassField(E))  eq 0;
-            Append(~refl_fields,E);
+            ////////////////----residue field of reflex field, pAdic ----///////////////////
+            if compute_reflex_fields then //check early exit on N: see above.
+                h_fac:=[ hi[1] : hi in Factorization(h)];
+                gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
+                gens_E:=[ eps(g) : g in gens_E_inM ];
+                E:=sub< N | gens_E >; //sometimes it seems to crash...
+                rrc:=(Ilog(p,q)) mod Ilog(p,#ResidueClassField(E))  eq 0;
+                Append(~refl_fields,E);
+                Append(~all_rrc,rrc);
+            end if;
             ////////////////----Shimura-Tanyiama----///////////////////
             st_tests:=[];
             for iP in [1..#primes] do
@@ -155,8 +172,6 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
                 Append(~st_tests, LHS eq RHS );
             end for;
             st:=&and(st_tests);
-
-            Append(~all_rrc,rrc);
             Append(~all_st,st);
         end for;
         AVh`RRC_data:=< all_cm,all_rrc,all_st,M,rtsM,N,eps,refl_fields >;
@@ -174,12 +189,12 @@ end intrinsic;
     PP<x>:=PolynomialRing(Integers());
 
     polys:=[
-        // x^6+3*x^4-10*x^3+15*x^2+125,
+        x^6+3*x^4-10*x^3+15*x^2+125,
         (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25)
         ];
     for h in polys do
         AVh:=IsogenyClass(h);
-        AVh;
+        AVh,pRank(AVh);
         q:=FiniteField(AVh);
         all_cm:=AllCMTypes(AVh);
         rrc_cm:=ResidueReflexCondition(AVh);

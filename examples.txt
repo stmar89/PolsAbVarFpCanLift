@@ -7,11 +7,16 @@
         - new create AbelianVariety with input : isogeny class , frac ideal or ZBasis, CM-type satisfying ST
         - add ComputeIsomorphismClassesAlmostOrdinary ?
         - IsPrincipallyPolarized for AlmOrd ?
+
+
+        - add 5.11
+        - 5.12 update
+
         
 */
     
 /////////////////////////////////
-// Example
+// Example 5.9
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -50,7 +55,7 @@
     end for;
 
 /////////////////////////////////
-// Example
+// Example 5.10
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -86,7 +91,7 @@
     end for;
 
 /////////////////////////////////
-// Example 5.11
+// Example 5.12
 /////////////////////////////////
 //TODO
 
