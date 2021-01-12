@@ -11,16 +11,8 @@
 
     In this packages we implement the code to compute isomorphism classes of abelian varieties in 
     almost ordinary squarefree isogeny classes over finite fields with odd characteristic.
-    These functions are called in the ComputeIsomorphismClasses 
 
 */
-
-// TODO: go through everything!
-
-
-///////////////////////////////////    
-// almost ordinary Oswal-Shankar //
-///////////////////////////////////
 
     is_in_Zp_span:=function( u , gens)
     // given an element u of a RngLocAElt and a sequence gens of RngLocAElt,
@@ -74,17 +66,12 @@
         // I check if this characterizes ss_hp.
 
         Lp:=SplittingField(hp);    
-        // [ [ Valuation(r[1]) : r in Roots(g[1],Lp) ] : g in fac ];
-        // ss_hp:=[ g[1] : g in fac | Degree(g[1]) eq 2 and 
-        //    IsWeaklyEqual(Qp ! q , ConstantCoefficient(g[1])) ];
         ss_hp:=[ g[1] : g in fac | Slopes(NewtonPolygon(g[1]))[1]/(Ilog(p,q)) eq -(1/2) ];
         assert #ss_hp eq 1;
         ss_hp:=ss_hp[1]; // this is is the supersingular factor of hp
         assert Degree(ss_hp) eq 2; 
         Kss:=LocalField(BaseRing(ss_hp),ss_hp);
         
-        // UA:=UniverseAlgebra(I);
-        // F:=FrobeniusEndomorphism(I)(1);
         UA:=Algebra(oo[1]);
         F:=PrimitiveElement(UA);
         Fss:=Kss.1;

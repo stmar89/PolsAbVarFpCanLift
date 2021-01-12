@@ -1,56 +1,42 @@
 /* vim: set syntax=magma : */
-/*
-    TODO
-        - update CCO -> ResidueReflexFieldCondition in examples below.
-        - check only ST for AlmOrd ?
-        - IsRamified ?
-        - new create AbelianVariety with input : isogeny class , frac ideal or ZBasis, CM-type satisfying ST
-        - add ComputeIsomorphismClassesAlmostOrdinary ?
-        - IsPrincipallyPolarized for AlmOrd ?
-
-
-        - add 5.11
-        - 5.12 update
-
-        
-*/
     
 /////////////////////////////////
 // Example 5.9
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/AlmOrd.m");
-
-
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
 
     _<x>:=PolynomialRing(Integers());
     f:=x^6 - 11*x^5 + 65*x^4 - 240*x^3 + 585*x^2 - 891*x + 729;
     If:=IsogenyClass(f:Check:=false);
     If;
     q:=FiniteField(If);
-    If`pRank:=3; //to ass the ordinary test
     R:=ZFVOrder(If);
     L:=Algebra(R);
     oo:=FindOverOrders(R);
-    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If,oo);
+    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If);
+    printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
+            and hence are Endomrophism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
     O:=MaximalOrder(L);
-    [ Index(O,S) : S in oo ];
-    [ Index(O,S) : S in oo_max_at_ss ];
+
     iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
-    assert IsRamified(Lss); // we are in the ramified case: this means there is a 1-1 map between AVs and ideals
+    printf "There are %o isomorphism classes of AVs\n",&+[ #I : I in iso];
+    "The isogeny class is ramified",IsRamified(Lss); 
+    "Hence there is a 1-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    rrc,st:=CCO(q,[CMPosElt(PHI) : PHI in all_cm]);
-    assert &and(rrc); //since we can lift, all cm types should satisfy rrc;
-    cms:=[ all_cm[i] : i in [1..#all_cm] | rrc[i] and st[i] ];
-    assert #cms eq 2; // only 2 cm-types should satisfy st
-    PHI:=cms[1]; // both cm types satisfying ST will give the same answer
-                 // since we are in the ramified case
+    CM_RRC:=ResidueReflexCondition(If);
+    assert #CM_RRC eq 2;
+    "There are 2 CM-types that satisfy the Shimura Tanyiama formula";
+    PHI:=CM_RRC[1];
     for isoS in iso do
+        "new endomorphism ring";
         for I in isoS do
+            "\tnew isomorphism class of AVs...";
             _,pps:=IsPrincipallyPolarized(I,PHI);
-            #pps;
+            printf "\t... with %o principal polarizations, up to isomorphism\n",#pps;
         end for;
     end for;
 
@@ -59,44 +45,73 @@
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    load "~/230_CCO/functions.txt";
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
+
     _<x>:=PolynomialRing(Integers());
     f:=(x^2 + 9)*(x^4 - 6*x^3 + 19*x^2 - 54*x + 81);
     If:=IsogenyClass(f:Check:=false);
     If;
     q:=FiniteField(If);
-    If`pRank:=3; //to ass the ordinary test
     R:=ZFVOrder(If);
     L:=Algebra(R);
     oo:=FindOverOrders(R);
-    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If,oo);
+    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If);
+    printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
+            and hence are Endomrophism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
     O:=MaximalOrder(L);
-    [ Index(O,S) : S in oo ];
-    [ Index(O,S) : S in oo_max_at_ss ];
+
     iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
-    assert not IsRamified(Lss); // we are in the inert case: this means there is a 2-1 map between AVs and ideals
+    printf "There are %o isomorphism classes of AVs\n",&+[ #I : I in iso];
+    "The isogeny class not is ramified : ",IsRamified(Lss); 
+    "Hence there is a 2-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    rrc,st:=CCO(q,[CMPosElt(PHI) : PHI in all_cm]);
-    assert &and(rrc); //since we can lift, all cm types should satisfy rrc;
-    cms:=[ all_cm[i] : i in [1..#all_cm] | rrc[i] and st[i] ];
-    assert #cms eq 2; // only 2 cm-types should satisfy st
-    for PHI in cms do
-        for isoS in iso do
-            for I in isoS do
+    CM_RRC:=ResidueReflexCondition(If);
+    assert #CM_RRC eq 2;
+    "There are 2 CM-types that satisfy the Shimura Tanyiama formula.\n
+    Each fractional ideal give rise to two AVs, one per CM-Type.\n
+    For each of these two CM Types and each ideal, we compute the principal polarizations.";
+    for isoS in iso do
+        "new endomorphism ring";
+        for I in isoS do
+            "\tnew ideal";
+            for PHI in CM_RRC do
+                "\t\tnew isomorphism class ...";
                 _,pps:=IsPrincipallyPolarized(I,PHI);
-                #pps;
+                printf "\t\t... with %o principal polarizations, up to isomorphism\n",#pps;
             end for;
         end for;
     end for;
 
 /////////////////////////////////
-// Example 5.12
+// Example 5.11
 /////////////////////////////////
-//TODO
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    load "~/230_CCO/functions.txt";
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+   
+    _<x>:=PolynomialRing(Integers());
+    h1:=x^2+3;
+    h2:=x^4+9;
+    AVh1:=IsogenyClass(h1);
+    "CM types of AVh1 satisfying RRC (sorted as in AllCMTypes)=\n",
+            [ PHI in ResidueReflexCondition(AVh1) : PHI in AllCMTypes(AVh1) ];
+    AVh2:=IsogenyClass(h2);
+    "CM types of AVh2 satisfying RRC (sorted as in AllCMTypes)=\n",
+            [ PHI in ResidueReflexCondition(AVh2) : PHI in AllCMTypes(AVh2) ];
+    AVh:=IsogenyClass(h1*h2);
+    "CM types of AVh satisfying RRC (sorted as in AllCMTypes)=\n",
+            [ PHI in ResidueReflexCondition(AVh) : PHI in AllCMTypes(AVh) ];
+
+
+
+/////////////////////////////////
+// Example 5.12
+/////////////////////////////////
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
    
     _<x>:=PolynomialRing(Integers());
     f:=x^6 - x^5 + 6*x^4 - 6*x^3 + 18*x^2 - 9*x + 27;
@@ -104,7 +119,6 @@
     If;
     q:=FiniteField(If);
     pRank(If);
-    If`pRank:=3; //to overrule some asserts in the code which at the moment requires Ordinary
     R:=ZFVOrder(If);
     L:=Algebra(R);
     oo:=FindOverOrders(R);
@@ -126,6 +140,8 @@
         "\n";
     end for;
     all_cm:=AllCMTypes(If);
+    "number of CM Types satisfying RRC=",#ResidueReflexCondition(If);
+    "CM types satisfying RRC (sorted as in AllCMTypes)=\n",[ PHI in ResidueReflexCondition(If) : PHI in all_cm ];
     for T in oo do
         "\nindex of End =",Index(O,T);
         for A in ComputeIsomorphismClassesWithEndomorphismRing(If,T) do
@@ -138,3 +154,4 @@
             printf "\n";
         end for;
     end for;
+
