@@ -17,6 +17,10 @@
 
 */
 
+
+declare verbose ResRefCond, 1;
+
+
 /////////////////////////////////////////////////    
 // Chai-Conrad-Oort : Residue reflex condition //
 /////////////////////////////////////////////////    
@@ -50,6 +54,7 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
     This allow us to do the tests in the p-adic splitting field, increasing speed.
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
 }
+    vprintf ResRefCond : "ResidueReflexConditioni\n";
     if not assigned AVh`RRC_CMTypes then
         q:=FiniteField(AVh);
         all_cm:=AllCMTypes(AVh);
@@ -136,7 +141,9 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
         else 
             compute_reflex_fields:=true;
         end if;
-compute_reflex_fields;
+        vprint ResRefCond : "early exit on N",compute_reflex_fields;
+
+        // now we loop over all cm-types
         for b in bs do
             assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*FL^(i-1) : i in [1..Degree(h)]];
             rtsM_PHI:=[];
@@ -189,8 +196,8 @@ end intrinsic;
     PP<x>:=PolynomialRing(Integers());
 
     polys:=[
-        x^6+3*x^4-10*x^3+15*x^2+125,
-        (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25)
+        x^6+3*x^4-10*x^3+15*x^2+125, // no. early exit on N. takes ~20 minutes
+        (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25) //early exit on N. fast
         ];
     for h in polys do
         AVh:=IsogenyClass(h);
