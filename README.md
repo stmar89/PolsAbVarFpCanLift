@@ -26,8 +26,12 @@ Eventually this packages will become a submodule of [`stmar89/AbVarFq`](https://
 References
 --
 
-`Ching-Li Chai, Brian Conrad, and Frans Oort, *Complex multiplication and lifting problems*, Mathematical Surveys and Monographs, vol. 195, American Mathematical Society, Providence, RI, 2014.`
+Ching-Li Chai, Brian Conrad, and Frans Oort,
+*Complex multiplication and lifting problems*,
+Mathematical Surveys and Monographs, vol. 195, American Mathematical Society, Providence, RI, 2014.
 
-`Abhishek Oswal and Ananth N. Shankar, *Almost ordinary abelian varieties over finite fields*, Journal of the London Mathematical Society 101 (2020), no. 3, 923–937.`
+Abhishek Oswal and Ananth N. Shankar,
+*Almost ordinary abelian varieties over finite fields*,
+Journal of the London Mathematical Society 101 (2020), no. 3, 923–937.
 
 
