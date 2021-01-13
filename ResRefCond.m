@@ -26,7 +26,8 @@ declare verbose ResRefCond, 1;
 /////////////////////////////////////////////////    
 
 // TODO : 
-//        - some precision issues which seem to be triggered by Magma. Reports have been sent in Fall 2020. More details in the code.
+//   - some precision issues which seem to be triggered by Magma. Reports have been sent in Fall 2020. More details in the code.
+//   - for exmaple I get Magma Internal Error for x^6 - 2*x^5 + 4*x^3 - 8*x + 8 .
 
 declare attributes IsogenyClassFq : RRC_CMTypes; // a SeqEnum[AlgAssCMType]
 declare attributes IsogenyClassFq : RRC_data; 
