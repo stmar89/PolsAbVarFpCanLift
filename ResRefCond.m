@@ -8,7 +8,7 @@
         Stefano Marseglia, stefano.marseglia89@gmail.com
 
 
-    Code to compute the CM-types of an AssociativeAlgebra that satisfy the Residue Reflex Condition (RRC),
+    Code to compute the CM-types that satisfy the Residual Reflex Condition (RRC),
     introduced by Chai-Conrad-Oort in 'Complex Multiplication and Lifting Problems'
 
     Recall that a CMType PHI satisfies RRC if: 
@@ -22,7 +22,7 @@ declare verbose ResRefCond, 1;
 
 
 /////////////////////////////////////////////////    
-// Chai-Conrad-Oort : Residue reflex condition //
+// Chai-Conrad-Oort : Residual reflex condition //
 /////////////////////////////////////////////////    
 
 // TODO : 
@@ -31,19 +31,19 @@ declare verbose ResRefCond, 1;
 
 declare attributes IsogenyClassFq : RRC_CMTypes; // a SeqEnum[AlgAssCMType]
 declare attributes IsogenyClassFq : RRC_data; 
-            // < all_cm,all_rrc,all_st,M,rtsM,N,eps,refl_fields >, where
+            // < all_cm,all_resrefl,all_st,M,rtsM,N,eps,refl_fields >, where
             // - all_cm is the output of AllCMTypes( ) ;
             // - M is a splitting fied over Q of the Weil polynomial h ;
             // - rtsM are the roots of h in M ;
             // - N is a splitting field over Qp of th ;
             // - eps:M->N an embedding ;
             // - refl_fields is the sequence of reflex fields (in N, via eps), constructed from the CM_Types in all_cm;
-            // - all_rrc is a seq of booleans (ordered as all_cm) representing whether the (local) reflex field associated 
+            // - all_resrefl is a seq of booleans (ordered as all_cm) representing whether the (local) reflex field associated 
             //   to the corresponding CMType has residue field which can be realized as a subfield of Fq=FiniteField(AVh) ;
             // - all_st is a seq of booleans (ordered as all_cm) representing whether the correspoding CMType satisfies the 
             //   the Shimura-Tanyiama formula, where valuations are induced via the embedding eps.
 
-intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum[AlgAssCMType]
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum[AlgAssCMType]
 {   
     It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
     Precision is the minimum precision to construct the p-adic splitting field (see below).
@@ -55,7 +55,7 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
     This allow us to do the tests in the p-adic splitting field, increasing speed.
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
 }
-    vprintf ResRefCond : "ResidueReflexConditioni\n";
+    vprintf ResRefCond : "ResidualReflexConditioni\n";
     if not assigned AVh`RRC_CMTypes then
         q:=FiniteField(AVh);
         all_cm:=AllCMTypes(AVh);
@@ -105,7 +105,7 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
         eps:=hom<M->N | rootM_inN >; // a choice of M->N. 
                                      // exists because both M and N are splitting fields 
         assert IsZero(Evaluate(DefiningPolynomial(M),eps(M.1)));
-        all_rrc:=[];
+        all_resrefl:=[];
         all_st:=[];
         facq:=Factorization(q*MaximalOrder(L));
         primes:=[ P[1] : P in facq ];
@@ -138,7 +138,7 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
         // which is the bottleneck of function. In particular refl_fields will be left empty
         if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
             compute_reflex_fields:=false;
-            all_rrc:=[ true : i in [1..#bs] ];
+            all_resrefl:=[ true : i in [1..#bs] ];
         else 
             compute_reflex_fields:=true;
         end if;
@@ -167,9 +167,9 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
                 gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
                 gens_E:=[ eps(g) : g in gens_E_inM ];
                 E:=sub< N | gens_E >; //sometimes it seems to crash...
-                rrc:=(Ilog(p,q)) mod Ilog(p,#ResidueClassField(E))  eq 0;
+                resrefl:=(Ilog(p,q)) mod Ilog(p,#ResidueClassField(E))  eq 0;
                 Append(~refl_fields,E);
-                Append(~all_rrc,rrc);
+                Append(~all_resrefl,resrefl);
             end if;
             ////////////////----Shimura-Tanyiama----///////////////////
             st_tests:=[];
@@ -182,8 +182,8 @@ intrinsic ResidueReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnum
             st:=&and(st_tests);
             Append(~all_st,st);
         end for;
-        AVh`RRC_data:=< all_cm,all_rrc,all_st,M,rtsM,N,eps,refl_fields >;
-        AVh`RRC_CMTypes:=[ all_cm[i] : i in [1..#all_cm] | all_rrc[i] and all_st[i] ];
+        AVh`RRC_data:=< all_cm,all_resrefl,all_st,M,rtsM,N,eps,refl_fields >;
+        AVh`RRC_CMTypes:=[ all_cm[i] : i in [1..#all_cm] | all_resrefl[i] and all_st[i] ];
     end if;
     return AVh`RRC_CMTypes;
 end intrinsic;
@@ -205,7 +205,7 @@ end intrinsic;
         AVh,pRank(AVh);
         q:=FiniteField(AVh);
         all_cm:=AllCMTypes(AVh);
-        rrc_cm:=ResidueReflexCondition(AVh);
+        rrc_cm:=ResidualReflexCondition(AVh);
         [ Index(all_cm,PHI) : PHI in rrc_cm ]; 
         AVh`RRC_data;
     end for;

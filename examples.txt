@@ -1,5 +1,8 @@
 /* vim: set syntax=magma : */
-    
+
+
+
+
 /////////////////////////////////
 // Example 5.9
 /////////////////////////////////
@@ -27,7 +30,7 @@
     "Hence there is a 1-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    CM_RRC:=ResidueReflexCondition(If);
+    CM_RRC:=ResidualReflexCondition(If);
     assert #CM_RRC eq 2;
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula";
     PHI:=CM_RRC[1];
@@ -67,7 +70,7 @@
     "Hence there is a 2-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    CM_RRC:=ResidueReflexCondition(If);
+    CM_RRC:=ResidualReflexCondition(If);
     assert #CM_RRC eq 2;
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula.\n
     Each fractional ideal give rise to two AVs, one per CM-Type.\n
@@ -96,13 +99,13 @@
     h2:=x^4+9;
     AVh1:=IsogenyClass(h1);
     "CM types of AVh1 satisfying RRC (sorted as in AllCMTypes)=\n",
-            [ PHI in ResidueReflexCondition(AVh1) : PHI in AllCMTypes(AVh1) ];
+            [ PHI in ResidualReflexCondition(AVh1) : PHI in AllCMTypes(AVh1) ];
     AVh2:=IsogenyClass(h2);
     "CM types of AVh2 satisfying RRC (sorted as in AllCMTypes)=\n",
-            [ PHI in ResidueReflexCondition(AVh2) : PHI in AllCMTypes(AVh2) ];
+            [ PHI in ResidualReflexCondition(AVh2) : PHI in AllCMTypes(AVh2) ];
     AVh:=IsogenyClass(h1*h2);
     "CM types of AVh satisfying RRC (sorted as in AllCMTypes)=\n",
-            [ PHI in ResidueReflexCondition(AVh) : PHI in AllCMTypes(AVh) ];
+            [ PHI in ResidualReflexCondition(AVh) : PHI in AllCMTypes(AVh) ];
 
 
 
@@ -140,8 +143,8 @@
         "\n";
     end for;
     all_cm:=AllCMTypes(If);
-    "number of CM Types satisfying RRC=",#ResidueReflexCondition(If);
-    "CM types satisfying RRC (sorted as in AllCMTypes)=\n",[ PHI in ResidueReflexCondition(If) : PHI in all_cm ];
+    "number of CM Types satisfying RRC=",#ResidualReflexCondition(If);
+    "CM types satisfying RRC (sorted as in AllCMTypes)=\n",[ PHI in ResidualReflexCondition(If) : PHI in all_cm ];
     for T in oo do
         "\nindex of End =",Index(O,T);
         for A in ComputeIsomorphismClassesWithEndomorphismRing(If,T) do

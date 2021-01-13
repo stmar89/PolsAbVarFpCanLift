@@ -13,7 +13,7 @@ This package requires [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq).
 
 The file `AlmOrd.m` contains the function `overorders_maximal_at_ss` that given as input an `IsogenyClassFq` of almost ordinary squarefree abelian varieties in odd characteristic returns the over-orders of ZZ[F,V] which are maximal at the supersingular part of the endomrophism algebra. These and only these are endormophism rings of abelian varieties in such an isogeny class.
 
-The file `ResRefCond.m` contains the intrinsic `ResidueReflexCondition` which take as input an `IsogenyClassFq` and returns a sequence of `AlgAssCMType` which satisfy the Residue Reflex Condition (RRC).
+The file `ResRefCond.m` contains the intrinsic `ResidualReflexCondition` which take as input an `IsogenyClassFq` and returns a sequence of `AlgAssCMType` which satisfy the Residual Reflex Condition (RRC).
 
 More details can be found in the files.
 
