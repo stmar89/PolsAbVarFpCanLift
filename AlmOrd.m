@@ -53,6 +53,8 @@
         q:=FiniteField(I);
         p:=CharacteristicFiniteField(I);
 
+        // we want to factor the polynomial h over Qp.
+        // next loop ensures that the precision is big enough
         k:=5;
         repeat
             k+:=1;
