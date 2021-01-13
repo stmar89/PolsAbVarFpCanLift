@@ -1,7 +1,18 @@
 /* vim: set syntax=magma : */
 
+/*
 
+    Magma implementation for
+        "Polarizations of abelian varieties over finite fields via canonical liftings", 
+         by Jonas Bergström, Valentijn Karemaker and Stefano Marseglia.
 
+    Please send bug reports and comments to 
+        Stefano Marseglia, stefano.marseglia89@gmail.com
+
+    Here we include the code to reporduce the examples.
+    Last tested on Magma V2.25-6
+
+*/
 
 /////////////////////////////////
 // Example 5.9
