@@ -83,7 +83,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnu
                 ChangePrecision(~Zp,prec);
                 hp:=ChangeRing(h,Zp);
                 go:=false;
-                printf ".";
+                vprint ResRefCond : "precision increased";
             end try;
         until go;
 
@@ -104,7 +104,9 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : Precision:=30) -> SeqEnu
         */
         eps:=hom<M->N | rootM_inN >; // a choice of M->N. 
                                      // exists because both M and N are splitting fields 
-        assert IsZero(Evaluate(DefiningPolynomial(M),eps(M.1)));
+                                     
+        vprint ResRefCond : Evaluate(DefiningPolynomial(M),eps(M.1));
+        assert IsWeaklyZero(Evaluate(DefiningPolynomial(M),eps(M.1)));
         all_resrefl:=[];
         all_st:=[];
         facq:=Factorization(q*MaximalOrder(L));
