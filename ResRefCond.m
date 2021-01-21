@@ -29,26 +29,15 @@ declare verbose ResRefCond, 2;
 ////////////////////    
 
 declare attributes IsogenyClassFq : RRC_CMTypes; // a SeqEnum[AlgAssCMType]
- declare attributes IsogenyClassFq : RRC_data;
-            // an associative array with the following keys:
-            // - "Q_splitting_field"  is a splitting fied over Q of the Weil polynomial h ;
-            // - "roots_in_Q_splitting_field" are the roots of h in M ;
-            // - "Qp_splitting_field" is a splitting field over Qp of h ;
-            // - "embedding_splitting_fields" eps:M->N an embedding ;
-           
-            // TO BE ADDED as attributes to a CM-type
-            // - "refl_fields" is the sequence of reflex fields (in , via eps), constructed from the CM_Types in all_cm;
-            // - all_resrefl is a seq of booleans (ordered as all_cm) representing whether the (local) reflex field associated 
-            //   to the corresponding CMType has residue field which can be realized as a subfield of Fq=FiniteField(AVh) ;
-            // - all_st is a seq of booleans (ordered as all_cm) representing whether the correspoding CMType satisfies the 
-            //   the Shimura-Tanyiama formula, where valuations are induced via the embedding eps.
 declare attributes IsogenyClassFq : RationalSplittingField; // <M,rtsM> the splitting field of Weil polynomial over Q,
                                                             // together with the roots; 
 declare attributes IsogenyClassFq : pAdicSplittingField; // as above, but over Qp 
 declare attributes IsogenyClassFq : EmbeddingOfSplittingFields; // an embedding from RationalSplittingField to pAdicSplittingField
 
 declare attributes AlgAssCMType : pAdicReflexField; // a subfield of pAdicSplittingFeld corresponding to the reflex field
+declare attributes AlgAssCMType : IsResidueReflexFieldEmbeddable; // a boolean: if k_E subset F_q
 declare attributes AlgAssCMType : ShimuraTanyiama; // add descriptior 
+declare attributes IsogenyClassFq :ShimuraTanyiamaPrecomputation; // data that does not depend on the CM-type. To avoid recomputation
 declare attributes AlgAssCMType : ComplexRoots; // <rtsM,map> where 
                                                 // rtsM is a set of roots of h in M:=RationalSplittingField
                                                 // and map is an embedding  of M in to CC
@@ -157,7 +146,7 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType) -> FldNum,SeqEnu
         map:=hom<M->ComplexField() | x:->Conjugates(x)[1] >;
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
-        assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*F^(i-1) : i in [1..deg]];
+        assert2 b eq &+[(Coordinates([b],pow_bas_L)[1,i])*F^(i-1) : i in [1..deg]];
         rtsM_PHI:=[];
         for FM in rtsM do
             bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
@@ -188,39 +177,51 @@ intrinsic ShimuraTanyiama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
     vprintf ResRefCond : "ShimuraTanyiama\n";
     if not assigned PHI`ShimuraTanyiama then
         prec:=MinPrecision;
-        q:=FiniteField(AVh);
         eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
-        M,rtsM:=RationalSplittingField(AVh);
-        N,_:=pAdicSplittingField(AVh); //now the precison is already high enough
-        p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
-        L:=UniverseAlgebra(AVh);
-        fac_q_L:=Factorization(q*MaximalOrder(L));
-        primes:=[ P[1] : P in fac_q_L ];
-        vals_q:=[ P[2] : P in fac_q_L ];
-        F:=FrobeniusEndomorphism(AVh)(1);
-        fac_F_L:=Factorization(F*MaximalOrder(L));
-        vals_F:=[  ];
-        hp_fac:=[ ]; //will contain the p adic factors of h sorted according to the bijection with P in primes 
-        RHS_D_P:=[ ]; // den of RHS of ST
-        for P in primes do
-            val_FatP:=[ fac[2] : fac in fac_F_L | fac[1] eq P ];
-            assert #val_FatP in {0,1}; // P either dividies F or not
-            val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
-            Append(~vals_F,val_FatP);
-            LP,mLP:=Completion(P : MinPrecision:=prec );
-            Pfac:=[ gp : gp in p_fac_h | Valuation(Evaluate(gp,mLP(F))) gt (prec div 2) ]; 
-            assert #Pfac eq 1; 
-            Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
-            RHS_D:=#[ r : r in rtsM | Valuation(Evaluate(Pfac[1],eps(r))) gt (prec div 2) ];
-            assert RHS_D eq Degree(Pfac[1]);
-            Append(~RHS_D_P,RHS_D);
-        end for;
+        if not assigned AVh`ShimuraTanyiamaPrecomputation then
+            // pre-computation, does not depend on PHI. Should be computed only once.
+            q:=FiniteField(AVh);
+            M,rtsM:=RationalSplittingField(AVh);
+            N,_:=pAdicSplittingField(AVh); //now the precison is already high enough
+            p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
+            L:=UniverseAlgebra(AVh);
+            fac_q_L:=Factorization(q*MaximalOrder(L));
+            primes:=[ P[1] : P in fac_q_L ];
+            vals_q:=[ P[2] : P in fac_q_L ];
+            F:=FrobeniusEndomorphism(AVh)(1);
+            fac_F_L:=Factorization(F*MaximalOrder(L));
+            vals_F:=[  ];
+            hp_fac:=[ ]; //will contain the p adic factors of h sorted according to the bijection with P in primes 
+            RHS_D_P:=[ ]; // den of RHS of ST
+            for P in primes do
+                val_FatP:=[ fac[2] : fac in fac_F_L | fac[1] eq P ];
+                assert #val_FatP in {0,1}; // P either dividies F or not
+                val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
+                Append(~vals_F,val_FatP);
+                LP,mLP:=Completion(P : MinPrecision:=prec );
+                Pfac:=[ gp : gp in p_fac_h | Valuation(Evaluate(gp,mLP(F))) gt (prec div 2) ]; 
+                assert #Pfac eq 1; 
+                Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
+                RHS_D:=#[ r : r in rtsM | Valuation(Evaluate(Pfac[1],eps(r))) gt (prec div 2) ];
+                assert RHS_D eq Degree(Pfac[1]);
+                Append(~RHS_D_P,RHS_D);
+            end for;
+            // end-precomputation
+            // we store the output in AVh`ShimuraTanyiamaPrecomputation
+            // < vals_F , vals_q, RHS_D_P , hp_fac >;
+            AVh`ShimuraTanyiamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
+        else
+            vals_F:=AVh`ShimuraTanyiamaPrecomputation[1];
+            vals_q:=AVh`ShimuraTanyiamaPrecomputation[2];
+            RHS_D_P:=AVh`ShimuraTanyiamaPrecomputation[3];
+            hp_fac:=AVh`ShimuraTanyiamaPrecomputation[4];
+        end if;
+
         rtsM_PHI:=ComplexRoots(AVh,PHI); 
-        assert forall{ r : r in rtsM_PHI | r in M };
         vprintf ResRefCond : "ComplexRoots = %o",rtsM_PHI;
         ////////////////----Shimura-Tanyiama----///////////////////
         st_tests:=[];
-        for iP in [1..#primes] do
+        for iP in [1..#vals_F] do
             RHS_N:=#[ r : r in rtsM_PHI | Valuation(Evaluate(hp_fac[iP],eps(r))) gt (prec div 2) ];
             LHS:=vals_F[iP]/vals_q[iP];
             RHS:=RHS_N/RHS_D_P[iP];
@@ -272,10 +273,56 @@ end intrinsic;
 // IsResidueReflexFieldEmbeddable  //
 /////////////////////////////////////
 
+intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
+{   
+    Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh)
+}
+    vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
+    if not assigned PHI`IsResidueReflexFieldEmbeddable then
+        q:=FiniteField(AVh);
+        p:=CharacteristicFiniteField(AVh);
+        N:=pAdicSplittingField(AVh : MinPrecision:=MinPrecision);
+        // (early exit on N)
+        // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
+        // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
+        // the reflex fields.
+        // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
+        // which is the bottleneck of function. In particular refl_fields will be left empty
+        if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
+            PHI`IsResidueReflexFieldEmbeddable:=true;
+            vprint ResRefCond : "early exit on N";
+        else
+            vprint ResRefCond : "no early exit on N";
+            E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision);
+            kE:=ResidueClassField(E);
+            PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,#kE) eq 0;
+        end if;
+    end if;
+    return PHI`IsResidueReflexFieldEmbeddable;
+end intrinsic;
 
 /////////////////////////////////////////////////    
 // Chai-Conrad-Oort : Residual reflex condition //
 /////////////////////////////////////////////////    
+
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgCMType : MinPrecision:=30) -> SeqEnum[AlgAssCMType]
+{   
+    It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
+    MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
+
+    Recall that a CMType PHI satisfies RRC if: 
+        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
+    We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
+    This allow us to do the tests in the p-adic splitting field, increasing speed.
+    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
+}
+    vprintf ResRefCond : "ResidualReflexConditioni\n";
+    st:=ShimuraTanyiama(AVh,PHI : MinPrecision:=MinPrecision );
+    resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
+    return st and resrefl;
+end intrinsic;
+
 
 intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMType]
 {   
@@ -291,6 +338,33 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
 }
     vprintf ResRefCond : "ResidualReflexConditioni\n";
     if not assigned AVh`RRC_CMTypes then
+        rrc_cms:=[];
+        for PHI in AllCMTypes(AVh) do
+            st:=ShimuraTanyiama(AVh,PHI : MinPrecision:=MinPrecision );
+            resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
+            if st and resrefl then
+                Append(~rrc_cms,PHI);
+            end if;
+        end for;
+        AVh`RRC_CMTypes:=rrc_cms;
+    end if;
+    return AVh`RRC_CMTypes;
+end intrinsic;
+
+// TO BE REMOVED
+intrinsic CCO_OLD(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMType]
+{   
+    It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
+    MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
+
+    Recall that a CMType PHI satisfies RRC if: 
+        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
+    We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
+    This allow us to do the tests in the p-adic splitting field, increasing speed.
+    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
+}
+    vprintf ResRefCond : "CCO_OLD\n";
         q:=FiniteField(AVh);
         all_cm:=AllCMTypes(AVh);
         bs:=[ CMPosElt(PHI) : PHI in all_cm ];
@@ -317,7 +391,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
                 ChangePrecision(~Zp,prec);
                 hp:=ChangeRing(h,Zp);
                 go:=false;
-                vprint ResRefCond : "precision increased";
+                vprintf ResRefCond : "precision increased to %o\n",prec;
             end try;
         until go;
 
@@ -355,7 +429,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
             assert #vFLP in {0,1};
             vFLP:= (#vFLP eq 1) select vFLP[1] else 0;
             Append(~valsFL,vFLP);
-            LP,mLP:=Completion(P : Precision:=prec );
+            LP,mLP:=Completion(P : MinPrecision:=prec );
             Pfac:=[ gp : gp in fac | Valuation(Evaluate(gp,mLP(FL))) gt (prec div 2) ];
             assert #Pfac eq 1;
             Append(~hp_fac,Pfac[1]);
@@ -382,7 +456,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
 
         // now we loop over all cm-types
         for b in bs do
-            assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*FL^(i-1) : i in [1..Degree(h)]];
+            assert2 b eq &+[(Coordinates([b],pow_bas_L)[1,i])*FL^(i-1) : i in [1..Degree(h)]];
             rtsM_PHI:=[];
             for FM in rtsM do
                 bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..Degree(h)]]; // bM = 'image' of b in M 
@@ -418,10 +492,8 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
             st:=&and(st_tests);
             Append(~all_st,st);
         end for;
-        AVh`RRC_data:=< all_cm,all_resrefl,all_st,M,rtsM,N,eps,refl_fields >;
-        AVh`RRC_CMTypes:=[ all_cm[i] : i in [1..#all_cm] | all_resrefl[i] and all_st[i] ];
-    end if;
-    return AVh`RRC_CMTypes;
+        RRC_CMTypes:=[ all_cm[i] : i in [1..#all_cm] | all_resrefl[i] and all_st[i] ];
+    return RRC_CMTypes;
 end intrinsic;
 
 /*
@@ -432,35 +504,51 @@ end intrinsic;
 
     PP<x>:=PolynomialRing(Integers());
     polys:=[
-        x^6+3*x^4-10*x^3+15*x^2+125, // no. early exit on N. takes ~20 minutes
-        (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25) //early exit on N. fast
+        (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25), //early exit on N. fast
+        x^6+3*x^4-10*x^3+15*x^2+125 // no early exit on N. takes ~20 minutes
         ];
     for h in polys do
         AVh:=IsogenyClass(h);
-        AVh,pRank(AVh);
-        q:=FiniteField(AVh);
-        all_cm:=AllCMTypes(AVh);
-        rrc_cm:=ResidualReflexCondition(AVh);
-        [ Index(all_cm,PHI) : PHI in rrc_cm ]; 
-        AVh`RRC_data;
+        AVh;
+        time #ResidualReflexCondition(AVh);
     end for;
 
 
-    // problematic polys.
-    // trigger errors
 
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",2);
+    SetVerbose("ResRefCond",0);
     polys:=[
-        x^6 - 2*x^5 + 4*x^3 - 8*x + 8, //this give rise to Magma Internal Error in V2.25-6, also in 2.25-8
-        x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16, //this give rise to Magma Internal Error in V2.25-6
-        x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16, //this give rise to Magma Internal Error in V2.25-6 
+        //(x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25) //early exit on N. fast
+        x^6+3*x^4-10*x^3+15*x^2+125 // no. early exit on N. takes ~20 minutes
+        ];
+    for h in polys do
+        AVh:=IsogenyClass(h);
+        AVh;
+        _:=[ CMPosElt(PHI) : PHI in AllCMTypes(AVh) ];
+        SetProfile(true);
+        time #ResidualReflexCondition(AVh);
+        SetProfile(false);
+        G_new:=ProfileGraph();
+        SetProfile(true);
+        time #CCO_OLD(AVh);
+        SetProfile(false);
+        G_old:=ProfileGraph();
+    end for;
+    ProfilePrintByTotalTime(G_new);
+    ProfilePrintByTotalTime(G_old);
+
+    // problematic polys.
+    // trigger errors
+    polys:=[
+        //x^6 - 2*x^5 + 4*x^3 - 8*x + 8, //this give rise to Magma Internal Error in V2.25-6, also in 2.25-8
+        //x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16, //this give rise to Magma Internal Error in V2.25-6
+        //x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16, //this give rise to Magma Internal Error in V2.25-6 
         x^8 - 7*x^7 + 25*x^6 - 63*x^5 + 123*x^4 - 189*x^3 + 225*x^2 - 189*x + 81, // broken assert in V2.25-6, also in V2.25-8
         x^8 - 5*x^7 + 10*x^6 - 9*x^5 + 6*x^4 - 27*x^3 + 90*x^2 - 135*x + 81,
         x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81,
-        x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81 // it triggers a different bug in V2.25-8
+        x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81 // it triggers a different MagmaInternal Error in V2.25-8
     ];
     
     for h in polys do
@@ -476,22 +564,8 @@ end intrinsic;
             i;
             time ShimuraTanyiama(AVh,PHI);
             time _:=pAdicReflexField(AVh,PHI);
+            time IsResidueReflexFieldEmbeddable(AVh,PHI);
         end for;
     end for;
-
-
-
-    try
-        AVh:=IsogenyClass(h);
-        AVh,pRank(AVh);
-        q:=FiniteField(AVh);
-        all_cm:=AllCMTypes(AVh);
-        rrc_cm:=ResidualReflexCondition(AVh);
-        [ Index(all_cm,PHI) : PHI in rrc_cm ]; 
-        AVh`RRC_data;
-    catch e
-        e;
-    end try;
-
 
 */
