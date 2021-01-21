@@ -197,7 +197,6 @@ end intrinsic;
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
 
     PP<x>:=PolynomialRing(Integers());
-
     polys:=[
         x^6+3*x^4-10*x^3+15*x^2+125, // no. early exit on N. takes ~20 minutes
         (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25) //early exit on N. fast
@@ -211,5 +210,31 @@ end intrinsic;
         [ Index(all_cm,PHI) : PHI in rrc_cm ]; 
         AVh`RRC_data;
     end for;
+
+
+    AttachSpec("packages/AbVarFq/packages.spec");
+    Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
+    PP<x>:=PolynomialRing(Integers());
+    // polys that trigger errors
+    h:=x^6 - 2*x^5 + 4*x^3 - 8*x + 8; //this give rise to Magma Internal Error in V2.25-6, also in 2.25-8
+    h:=x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16; //this give rise to Magma Internal Error in V2.25-6
+    h:=x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16;//this give rise to Magma Internal Error in V2.25-6 
+    h:=x^8 - 7*x^7 + 25*x^6 - 63*x^5 + 123*x^4 - 189*x^3 + 225*x^2 - 189*x + 81; // broken assert in V2.25-6, also in V2.25-8
+    h:=x^8 - 5*x^7 + 10*x^6 - 9*x^5 + 6*x^4 - 27*x^3 + 90*x^2 - 135*x + 81;
+    h:=x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81;
+    h:=x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81; // it triggers a different bug in V2.25-8
+
+    try
+        AVh:=IsogenyClass(h);
+        AVh,pRank(AVh);
+        q:=FiniteField(AVh);
+        all_cm:=AllCMTypes(AVh);
+        rrc_cm:=ResidualReflexCondition(AVh);
+        [ Index(all_cm,PHI) : PHI in rrc_cm ]; 
+        AVh`RRC_data;
+    catch e
+        e;
+    end try;
+
 
 */
