@@ -150,7 +150,7 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType) -> FldNum,SeqEnu
         rtsM_PHI:=[];
         for FM in rtsM do
             bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
-            assert bM eq -ComplexConjugate(bM);
+            assert2 bM eq -ComplexConjugate(bM); // a lot more expensive than expected
             if Im(map(bM)) gt 0 then  // this is the choice phi_0:M->CC
                                                 // which induces a bijection Hom(L,C) <-> rtsM given by
                                                 // phi |-> the unique pi_j such that phi_0(pi_j)=phi(pi)
@@ -460,7 +460,7 @@ intrinsic CCO_OLD(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMTyp
             rtsM_PHI:=[];
             for FM in rtsM do
                 bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..Degree(h)]]; // bM = 'image' of b in M 
-                assert bM eq -ComplexConjugate(bM);
+                assert2 bM eq -ComplexConjugate(bM);
                 if Im(Conjugates(bM)[1]) gt 0 then  // this is the choice phi_0:M->CC
                                                     // which induces a bijection Hom(L,C) <-> rtsM given by
                                                     // phi |-> the unique pi_j such that phi_0(pi_j)=phi(pi)
