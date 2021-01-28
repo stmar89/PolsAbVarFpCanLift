@@ -12,7 +12,7 @@
     introduced by Chai-Conrad-Oort in 'Complex Multiplication and Lifting Problems'
 
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
 
 */
@@ -36,8 +36,8 @@ declare attributes IsogenyClassFq : EmbeddingOfSplittingFields; // an embedding 
 
 declare attributes AlgAssCMType : pAdicReflexField; // a subfield of pAdicSplittingFeld corresponding to the reflex field
 declare attributes AlgAssCMType : IsResidueReflexFieldEmbeddable; // a boolean: if k_E subset F_q
-declare attributes AlgAssCMType : ShimuraTanyiama; // add descriptior 
-declare attributes IsogenyClassFq :ShimuraTanyiamaPrecomputation; // data that does not depend on the CM-type. To avoid recomputation
+declare attributes AlgAssCMType : ShimuraTaniyama; // add descriptior 
+declare attributes IsogenyClassFq :ShimuraTaniyamaPrecomputation; // data that does not depend on the CM-type. To avoid recomputation
 declare attributes AlgAssCMType : ComplexRoots; // <rtsM,map> where 
                                                 // rtsM is a set of roots of h in M:=RationalSplittingField
                                                 // and map is an embedding  of M in to CC
@@ -167,18 +167,18 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType) -> FldNum,SeqEnu
 end intrinsic;
 
 ///////////////////////    
-// Shimura-Tanyiama  //
+// Shimura-Taniyama  //
 ///////////////////////    
 
-intrinsic ShimuraTanyiama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
+intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
 {   
-    Returns wheter a CM-type satisfies the Shimura-Tanyiama formula for the Forbenius of the Isogeny class AVh
+    Returns wheter a CM-type satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh
 }
-    vprintf ResRefCond : "ShimuraTanyiama\n";
-    if not assigned PHI`ShimuraTanyiama then
+    vprintf ResRefCond : "ShimuraTaniyama\n";
+    if not assigned PHI`ShimuraTaniyama then
         prec:=MinPrecision;
         eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
-        if not assigned AVh`ShimuraTanyiamaPrecomputation then
+        if not assigned AVh`ShimuraTaniyamaPrecomputation then
             // pre-computation, does not depend on PHI. Should be computed only once.
             q:=FiniteField(AVh);
             M,rtsM:=RationalSplittingField(AVh);
@@ -207,19 +207,19 @@ intrinsic ShimuraTanyiama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                 Append(~RHS_D_P,RHS_D);
             end for;
             // end-precomputation
-            // we store the output in AVh`ShimuraTanyiamaPrecomputation
+            // we store the output in AVh`ShimuraTaniyamaPrecomputation
             // < vals_F , vals_q, RHS_D_P , hp_fac >;
-            AVh`ShimuraTanyiamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
+            AVh`ShimuraTaniyamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
         else
-            vals_F:=AVh`ShimuraTanyiamaPrecomputation[1];
-            vals_q:=AVh`ShimuraTanyiamaPrecomputation[2];
-            RHS_D_P:=AVh`ShimuraTanyiamaPrecomputation[3];
-            hp_fac:=AVh`ShimuraTanyiamaPrecomputation[4];
+            vals_F:=AVh`ShimuraTaniyamaPrecomputation[1];
+            vals_q:=AVh`ShimuraTaniyamaPrecomputation[2];
+            RHS_D_P:=AVh`ShimuraTaniyamaPrecomputation[3];
+            hp_fac:=AVh`ShimuraTaniyamaPrecomputation[4];
         end if;
 
         rtsM_PHI:=ComplexRoots(AVh,PHI); 
         vprintf ResRefCond : "ComplexRoots = %o",rtsM_PHI;
-        ////////////////----Shimura-Tanyiama----///////////////////
+        ////////////////----Shimura-Taniyama----///////////////////
         st_tests:=[];
         for iP in [1..#vals_F] do
             RHS_N:=#[ r : r in rtsM_PHI | Valuation(Evaluate(hp_fac[iP],eps(r))) gt (prec div 2) ];
@@ -228,9 +228,9 @@ intrinsic ShimuraTanyiama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
             Append(~st_tests, LHS eq RHS );
         end for;
         st:=&and(st_tests);
-        PHI`ShimuraTanyiama:=st;
+        PHI`ShimuraTaniyama:=st;
     end if;
-    return PHI`ShimuraTanyiama;
+    return PHI`ShimuraTaniyama;
 end intrinsic;
 
 ///////////////////////
@@ -311,14 +311,14 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgCMType : MinPrec
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
 
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
 }
     vprintf ResRefCond : "ResidualReflexConditioni\n";
-    st:=ShimuraTanyiama(AVh,PHI : MinPrecision:=MinPrecision );
+    st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision );
     resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
     return st and resrefl;
 end intrinsic;
@@ -330,7 +330,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
 
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
@@ -340,7 +340,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
     if not assigned AVh`RRC_CMTypes then
         rrc_cms:=[];
         for PHI in AllCMTypes(AVh) do
-            st:=ShimuraTanyiama(AVh,PHI : MinPrecision:=MinPrecision );
+            st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision );
             resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
             if st and resrefl then
                 Append(~rrc_cms,PHI);
@@ -358,7 +358,7 @@ intrinsic CCO_OLD(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMTyp
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
 
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Tanyiama formula, and
+        *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
@@ -481,7 +481,7 @@ intrinsic CCO_OLD(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMTyp
                 Append(~refl_fields,E);
                 Append(~all_resrefl,resrefl);
             end if;
-            ////////////////----Shimura-Tanyiama----///////////////////
+            ////////////////----Shimura-Taniyama----///////////////////
             st_tests:=[];
             for iP in [1..#primes] do
                 RHS_N:=#[ r : r in rtsM_PHI | Valuation(Evaluate(hp_fac[iP],eps(r))) gt (prec div 2) ];
@@ -562,7 +562,7 @@ end intrinsic;
         cms:=AllCMTypes(AVh);
         for i->PHI in cms do
             i;
-            time ShimuraTanyiama(AVh,PHI);
+            time ShimuraTaniyama(AVh,PHI);
             time _:=pAdicReflexField(AVh,PHI);
             time IsResidueReflexFieldEmbeddable(AVh,PHI);
         end for;
