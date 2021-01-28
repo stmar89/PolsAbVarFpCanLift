@@ -184,6 +184,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
             M,rtsM:=RationalSplittingField(AVh);
             N,_:=pAdicSplittingField(AVh); //now the precison is already high enough
             p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
+            prec:=Precision(BaseRing(N));
             L:=UniverseAlgebra(AVh);
             fac_q_L:=Factorization(q*MaximalOrder(L));
             primes:=[ P[1] : P in fac_q_L ];
@@ -199,10 +200,16 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                 val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
                 Append(~vals_F,val_FatP);
                 LP,mLP:=Completion(P : MinPrecision:=prec );
-                Pfac:=[ gp : gp in p_fac_h | Valuation(Evaluate(gp,mLP(F))) gt (prec div 2) ]; 
+                //Pfac:=[ gp : gp in p_fac_h | IsWeaklyZero(Evaluate(gp,mLP(F))) ]; // Completion seems to ignore my precision param
+                                                                                    // so IsWeaklyZero doesn't seem to be working
+                // workaround
+                    is_zero:=[ Valuation(Evaluate(gp,mLP(F))) : gp in p_fac_h ];
+                    max:=Max(is_zero);
+                    Pfac:=[ p_fac_h[i] : i in [1..#p_fac_h] | is_zero[i] eq max ];
+                // end workaround
                 assert #Pfac eq 1; 
                 Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
-                RHS_D:=#[ r : r in rtsM | Valuation(Evaluate(Pfac[1],eps(r))) gt (prec div 2) ];
+                RHS_D:=#[ r : r in rtsM | IsWeaklyZero(Evaluate(Pfac[1],eps(r))) ];
                 assert RHS_D eq Degree(Pfac[1]);
                 Append(~RHS_D_P,RHS_D);
             end for;
@@ -567,5 +574,20 @@ end intrinsic;
             time IsResidueReflexFieldEmbeddable(AVh,PHI);
         end for;
     end for;
+
+
+    //triggering errors in ShimuraTaniyma
+    // 4.2.ab_a_ac_e.txt  4.2.b_a_c_e.txt    4.3.ab_d_j_aj.txt  4.3.b_d_j_j.txt    4.3.c_d_j_s.txt
+    // 4.2.ab_c_ac_a.txt  4.3.ab_d_aj_j.txt  4.3.b_d_aj_aj.txt  4.3.c_d_aj_as.txt
+    AttachSpec("packages/AbVarFq/packages.spec");
+    Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
+    SetVerbose("ResRefCond",2);
+    PP<x>:=PolynomialRing(Integers());
+    polys:=[
+        PP!Reverse([1,-1,0,-2,+4,-4,0,-8,+16]), //slow
+        PP!Reverse(Coefficients((1+x+3*x^2)*(1+9*x^3+27*x^6))) //fast
+    ];
+
+
 
 */
