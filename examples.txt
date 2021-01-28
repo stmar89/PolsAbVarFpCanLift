@@ -41,10 +41,10 @@
     "Hence there is a 1-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    CM_RRC:=ResidualReflexCondition(If);
-    assert #CM_RRC eq 2;
-    "There are 2 CM-types that satisfy the Shimura Tanyiama formula";
-    PHI:=CM_RRC[1];
+    CM_ST:=[ PHI : PHI in all_cm | ShimuraTaniyama(If,PHI)];
+    assert #CM_ST eq 2;
+    "There are 2 CM-types that satisfy the Shimura Tanyiama formula. Both will give the same output (in terms of polarizations).";
+    PHI:=CM_ST[1];
     for isoS in iso do
         "new endomorphism ring";
         for I in isoS do
@@ -81,8 +81,8 @@
     "Hence there is a 2-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
-    CM_RRC:=ResidualReflexCondition(If);
-    assert #CM_RRC eq 2;
+    CM_ST:=[ PHI : PHI in all_cm | ShimuraTaniyama(If,PHI)];
+    assert #CM_ST eq 2;
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula.\n
     Each fractional ideal give rise to two AVs, one per CM-Type.\n
     For each of these two CM Types and each ideal, we compute the principal polarizations.";
@@ -90,7 +90,7 @@
         "new endomorphism ring";
         for I in isoS do
             "\tnew ideal";
-            for PHI in CM_RRC do
+            for PHI in CM_ST do
                 "\t\tnew isomorphism class ...";
                 _,pps:=IsPrincipallyPolarized(I,PHI);
                 printf "\t\t... with %o principal polarizations, up to isomorphism\n",#pps;
