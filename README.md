@@ -12,12 +12,23 @@ Details
 This package requires [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq).
 
 The file `AlmOrd.m` contains the function `overorders_maximal_at_ss` that given as input an `IsogenyClassFq` of almost-ordinary squarefree abelian varieties in odd characteristic returns the over-orders of ZZ[F,V] which are maximal at the supersingular part of the endomorphism algebra. These and only these are endomorphism rings of abelian varieties in such an isogeny class.
+See Oswal-Shankar (below) for more details.
 
-The file `ResRefCond.m` contains the intrinsic `ResidualReflexCondition` which take as input an `IsogenyClassFq` and returns a sequence of `AlgAssCMType` which satisfy the Residual Reflex Condition (RRC).
+The file `ResRefCond.m` contains code to check wheter a CM-type satisfies the Shimura-Taniyama formula and the Residual Reflex Condition (RRC). Recall that a CMType PHI satisfies RRC if: 
+    *) the CM-type satisfies the Shimura-Taniyama formula, and
+    *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
+See Chai-Conrad-Oort (below) for more details about RRC.
 
-More details can be found in the files.
+The main intrinsics are:
+- `ShimuraTaniyama(AVh,PHI)` : returns wheter a CM-type PHI satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh.
+- `pAdicReflexField(AVh,PHI)` : given an isogeny class AVh and a CM-type PHI returns the reflex field associated to PHI as a p-adic field.
+- `IsResidueReflexFieldEmbeddable(AVh,PHI)` : given an isogeny class AVh over FFq returns the if the residue field of reflex field associated to the CM-type can be embedded in FFq.
+- `ResidualReflexCondition(AVh,PHI)` : given an isogeny class AVh and a CM-type PHI returns whether PHI satisfies the residual reflex conditon (RRC). 
+- `ResidualReflexCondition(AVh)` : given an isogeny class AVh returns the sequence of CM-types that satisfy RRC.
 
-In the file `examples.txt` there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions to compute isomorphism classes and principal polarizations.
+Moreover there are the auxiliary intrinsics `RationalSplittingField`, `pAdicSplittingField`, EmbeddingOfSplittingFields` and `ComplexRoots`. For the description of those and more details in general can be found in the file itself.
+
+In the file `examples.txt` there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions and intrisics to compute isomorphism classes and principal polarizations.
 
 Future Plans
 --
