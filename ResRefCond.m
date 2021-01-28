@@ -577,16 +577,15 @@ end intrinsic;
 
 
     //triggering errors in ShimuraTaniyma
-    // 4.2.ab_a_ac_e.txt  4.2.b_a_c_e.txt    4.3.ab_d_j_aj.txt  4.3.b_d_j_j.txt    4.3.c_d_j_s.txt
-    // 4.2.ab_c_ac_a.txt  4.3.ab_d_aj_j.txt  4.3.b_d_aj_aj.txt  4.3.c_d_aj_as.txt
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
-    SetVerbose("ResRefCond",2);
     PP<x>:=PolynomialRing(Integers());
-    polys:=[
-        PP!Reverse([1,-1,0,-2,+4,-4,0,-8,+16]), //slow
-        PP!Reverse(Coefficients((1+x+3*x^2)*(1+9*x^3+27*x^6))) //fast
-    ];
+    h:=x^8 + x^7 + 3*x^6 + 9*x^5 + 9*x^4 + 27*x^3 + 27*x^2 + 27*x + 81;
+    Ih:=IsogenyClass(h);
+    all_cm:=AllCMTypes(Ih);
+    for PHI in all_cm do
+        ShimuraTaniyama(Ih,PHI);
+    end for;
 
 
 
