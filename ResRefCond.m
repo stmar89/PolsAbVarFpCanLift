@@ -23,6 +23,7 @@ declare verbose ResRefCond, 2;
 // TODO : 
 //   - some precision issues which seem to be triggered by Magma. Reports have been sent in Fall 2020. More details in the code.
 //   - for exmaple I get Magma Internal Error for x^6 - 2*x^5 + 4*x^3 - 8*x + 8 .
+//   bugs in shimura Taniyama, see in tests
 
 ////////////////////    
 // New Attributes //
@@ -554,6 +555,17 @@ end intrinsic;
 
 
     //triggering errors in ShimuraTaniyma fixed
+    //
+    //
+    //x^8 - x^6 + 12*x^4 - 9*x^2 + 81;
+    //x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81;
+    //x^8 - x^7 + x^6 - 12*x^4 + 9*x^2 - 27*x + 81;
+    //x^8 - x^7 + 3*x^6 + 27*x^2 - 27*x + 81;
+    //x^8 - x^7 + 3*x^6 - 9*x^5 + 9*x^4 - 27*x^3 + 27*x^2 - 27*x + 81;
+    //x^8 - 2*x^7 + 3*x^6 + 27*x^2 - 54*x + 81;
+    //x^8 - 2*x^7 + 3*x^6 - 9*x^5 + 18*x^4 - 27*x^3 + 27*x^2 - 54*x + 81;
+    //x^8 - 2*x^7 + 3*x^6 + 9*x^5 - 18*x^4 + 27*x^3 + 27*x^2 - 54*x + 81;
+    //x^8 - 2*x^7 + 9*x^6 - 15*x^5 + 39*x^4 - 45*x^3 + 81*x^2 - 54*x + 81;
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
