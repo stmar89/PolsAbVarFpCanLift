@@ -117,8 +117,14 @@
     AVh:=IsogenyClass(h1*h2);
     "CM types of AVh satisfying RRC (sorted as in AllCMTypes)=\n",
             [ PHI in ResidualReflexCondition(AVh) : PHI in AllCMTypes(AVh) ];
-
-
+    "One can observe that the Shimura-Taniyama formula is satisfied by all cm-types of AVh1, AVH2 and AVh ... ";
+            [ ShimuraTaniyama(AVh1,PHI) : PHI in AllCMTypes(AVh1) ];
+            [ ShimuraTaniyama(AVh2,PHI) : PHI in AllCMTypes(AVh2) ];
+            [ ShimuraTaniyama(AVh,PHI) : PHI in AllCMTypes(AVh) ];
+    "... so the failure of RRC is in the embeddability of the residue field of the reflex field.";
+            [ IsResidueReflexFieldEmbeddable(AVh1,PHI) : PHI in AllCMTypes(AVh1) ];
+            [ IsResidueReflexFieldEmbeddable(AVh2,PHI) : PHI in AllCMTypes(AVh2) ];
+            [ IsResidueReflexFieldEmbeddable(AVh,PHI) : PHI in AllCMTypes(AVh) ];
 
 /////////////////////////////////
 // Example 5.12
