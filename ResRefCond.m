@@ -211,6 +211,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                 assert #Pfac eq 1; 
                 Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
                 RHS_D:=#[ r : r in rtsM | IsWeaklyZero(Evaluate(Pfac[1],eps(r))) ];
+                vprintf "ResRefCond","Pfac[1]=%o\nRHS_D=%o\n",Pfac[1],RHS_D;
                 assert RHS_D eq Degree(Pfac[1]);
                 Append(~RHS_D_P,RHS_D);
             end for;
@@ -554,26 +555,34 @@ end intrinsic;
     end for;
 
 
-    //triggering errors in ShimuraTaniyma fixed
-    //
-    //
-    //x^8 - x^6 + 12*x^4 - 9*x^2 + 81;
-    //x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81;
-    //x^8 - x^7 + x^6 - 12*x^4 + 9*x^2 - 27*x + 81;
-    //x^8 - x^7 + 3*x^6 + 27*x^2 - 27*x + 81;
-    //x^8 - x^7 + 3*x^6 - 9*x^5 + 9*x^4 - 27*x^3 + 27*x^2 - 27*x + 81;
-    //x^8 - 2*x^7 + 3*x^6 + 27*x^2 - 54*x + 81;
-    //x^8 - 2*x^7 + 3*x^6 - 9*x^5 + 18*x^4 - 27*x^3 + 27*x^2 - 54*x + 81;
-    //x^8 - 2*x^7 + 3*x^6 + 9*x^5 - 18*x^4 + 27*x^3 + 27*x^2 - 54*x + 81;
-    //x^8 - 2*x^7 + 9*x^6 - 15*x^5 + 39*x^4 - 45*x^3 + 81*x^2 - 54*x + 81;
+    //triggering errors in ShimuraTaniyma
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    h:=x^8 + x^7 + 3*x^6 + 9*x^5 + 9*x^4 + 27*x^3 + 27*x^2 + 27*x + 81;
-    Ih:=IsogenyClass(h);
-    all_cm:=AllCMTypes(Ih);
-    for PHI in all_cm do
-        ShimuraTaniyama(Ih,PHI);
+    polys:=[
+        x^8 - x^6 + 12*x^4 - 9*x^2 + 81,
+        x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81,
+        x^8 - x^7 + x^6 - 12*x^4 + 9*x^2 - 27*x + 81,
+        x^8 - x^7 + 3*x^6 + 27*x^2 - 27*x + 81,
+        x^8 - x^7 + 3*x^6 - 9*x^5 + 9*x^4 - 27*x^3 + 27*x^2 - 27*x + 81,
+        x^8 + 2*x^6 + 3*x^4 + 18*x^2 + 81,
+        x^8 + 2*x^6 + 18*x^4 + 18*x^2 + 81,
+        x^8 - 2*x^7 + 3*x^6 + 27*x^2 - 54*x + 81,
+        x^8 - 2*x^7 + 3*x^6 - 9*x^5 + 18*x^4 - 27*x^3 + 27*x^2 - 54*x + 81,
+        x^8 - 2*x^7 + 3*x^6 + 9*x^5 - 18*x^4 + 27*x^3 + 27*x^2 - 54*x + 81,
+        x^8 - 2*x^7 + 9*x^6 - 15*x^5 + 39*x^4 - 45*x^3 + 81*x^2 - 54*x + 81,
+        x^8 + 5*x^6 - 6*x^5 + 12*x^4 - 18*x^3 + 45*x^2 + 81,
+        x^8 + x^7 + 3*x^6 + 27*x^2 + 27*x + 81,
+        x^8 + x^7 + 3*x^6 - 9*x^5 - 9*x^4 - 27*x^3 + 27*x^2 + 27*x + 81,
+        x^8 + 2*x^7 + 3*x^6 - 9*x^5 - 18*x^4 - 27*x^3 + 27*x^2 + 54*x + 81,
+        x^8 + 2*x^7 + 3*x^6 + 9*x^5 + 18*x^4 + 27*x^3 + 27*x^2 + 54*x + 81
+    ];
+    for h in polys do
+        Ih:=IsogenyClass(h);
+        all_cm:=AllCMTypes(Ih);
+        for PHI in all_cm do
+            ShimuraTaniyama(Ih,PHI);
+        end for;
     end for;
 
 */
