@@ -211,7 +211,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                 assert #Pfac eq 1; 
                 Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
                 RHS_D:=#[ r : r in rtsM | IsWeaklyZero(Evaluate(Pfac[1],eps(r))) ];
-                vprintf "ResRefCond","Pfac[1]=%o\nRHS_D=%o\n",Pfac[1],RHS_D;
+                vprintf ResRefCond : "Pfac[1]=%o\nRHS_D=%o\n",Pfac[1],RHS_D;
                 assert RHS_D eq Degree(Pfac[1]);
                 Append(~RHS_D_P,RHS_D);
             end for;
@@ -559,6 +559,7 @@ end intrinsic;
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
+    SetVerbose("ResRefCond",2);
     polys:=[
         x^8 - x^6 + 12*x^4 - 9*x^2 + 81,
         x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81,
