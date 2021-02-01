@@ -100,7 +100,7 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30) -> 
         repeat
             go:=true;
             try
-                N:=pAdicSplittingField(AVh : MinPrecision:=prec);
+                N:=pAdicSplittingField(AVh : MinPrecision:=2*prec);
                
                 rtsMinN:=[ r[1] : r in Roots(PolynomialRing(N)!DefiningPolynomial(M)) ];
                 is_root:=false;
@@ -178,48 +178,65 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
     vprintf ResRefCond : "ShimuraTaniyama\n";
     if not assigned PHI`ShimuraTaniyama then
         prec:=MinPrecision;
-        eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
-        if not assigned AVh`ShimuraTaniyamaPrecomputation then
-            // pre-computation, does not depend on PHI. Should be computed only once.
-            q:=FiniteField(AVh);
-            M,rtsM:=RationalSplittingField(AVh);
-            N,_:=pAdicSplittingField(AVh); //now the precison is already high enough
-            p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
-            prec:=Precision(BaseRing(N));
-            L:=UniverseAlgebra(AVh);
-            fac_q_L:=Factorization(q*MaximalOrder(L));
-            primes:=[ P[1] : P in fac_q_L ];
-            vals_q:=[ P[2] : P in fac_q_L ];
-            F:=FrobeniusEndomorphism(AVh)(1);
-            fac_F_L:=Factorization(F*MaximalOrder(L));
-            vals_F:=[  ];
-            hp_fac:=[ ]; //will contain the p adic factors of h sorted according to the bijection with P in primes 
-            RHS_D_P:=[ ]; // den of RHS of ST
-            for P in primes do
-                val_FatP:=[ fac[2] : fac in fac_F_L | fac[1] eq P ];
-                assert #val_FatP in {0,1}; // P either dividies F or not
-                val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
-                Append(~vals_F,val_FatP);
-                LP,mLP:=Completion(P : MinPrecision:=prec );
-                //Pfac:=[ gp : gp in p_fac_h | IsWeaklyZero(Evaluate(gp,mLP(F))) ]; // Completion seems to ignore my precision param
-                                                                                    // so IsWeaklyZero doesn't seem to be working
-                // workaround
-                    is_zero:=[ Valuation(Evaluate(gp,mLP(F))) : gp in p_fac_h ];
-                    max:=Max(is_zero);
-                    Pfac:=[ p_fac_h[i] : i in [1..#p_fac_h] | is_zero[i] eq max ];
-                // end workaround
-                assert #Pfac eq 1; 
-                Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
-                RHS_D:=#[ r : r in rtsM | IsWeaklyZero(Evaluate(Pfac[1],eps(r))) ];
-                vprintf ResRefCond : "Pfac[1]=%o\nRHS_D=%o\n",Pfac[1],RHS_D;
-                assert RHS_D eq Degree(Pfac[1]);
-                Append(~RHS_D_P,RHS_D);
-            end for;
-            // end-precomputation
-            // we store the output in AVh`ShimuraTaniyamaPrecomputation
-            // < vals_F , vals_q, RHS_D_P , hp_fac >;
-            AVh`ShimuraTaniyamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
+        if not assigned AVh`ShimuraTaniyamaPrecomputation or 
+            MinPrecision gt Precision(BaseRing(AVh`ShimuraTaniyamaPrecomputation[4][1])) then
+            repeat
+                go:=true;
+                try
+                    eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
+                    // pre-computation, does not depend on PHI. Should be computed only once.
+                    q:=FiniteField(AVh);
+                    M,rtsM:=RationalSplittingField(AVh);
+                    N:=Codomain(eps); 
+                    p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
+                    L:=UniverseAlgebra(AVh);
+                    fac_q_L:=Factorization(q*MaximalOrder(L));
+                    primes:=[ P[1] : P in fac_q_L ];
+                    vals_q:=[ P[2] : P in fac_q_L ];
+                    F:=FrobeniusEndomorphism(AVh)(1);
+                    fac_F_L:=Factorization(F*MaximalOrder(L));
+                    vals_F:=[  ];
+                    hp_fac:=[ ]; //will contain the p adic factors of h sorted according to the bijection with P in primes 
+                    RHS_D_P:=[ ]; // den of RHS of ST
+                    for P in primes do
+                        val_FatP:=[ fac[2] : fac in fac_F_L | fac[1] eq P ];
+                        assert #val_FatP in {0,1}; // P either dividies F or not
+                        val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
+                        Append(~vals_F,val_FatP);
+                        LP,mLP:=Completion(P : MinPrecision:=prec );
+                        //Pfac:=[ gp : gp in p_fac_h | IsWeaklyZero(Evaluate(gp,mLP(F))) ]; 
+                        //      Completion seems to ignore my precision param so IsWeaklyZero doesn't seem to be working
+                        // workaround
+                            is_zero:=[ Valuation(Evaluate(gp,mLP(F))) : gp in p_fac_h ];
+                            max:=Max(is_zero);
+                            Pfac:=[ p_fac_h[i] : i in [1..#p_fac_h] | is_zero[i] gt Round(0.95*max) ];
+                        // end workaround
+                        assert #Pfac eq 1; 
+                        Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
+                        // workaround
+                            is_zero:=[ Valuation(Evaluate(Pfac[1],eps(r))) : r in rtsM];
+                            max:=Max(is_zero);
+                            RHS_D:=#[ rtsM[i] : i in [1..#rtsM] | is_zero[i] gt Round(0.95*max) ];
+                        // end workaround
+                        vprintf ResRefCond,2 : "Pfac[1]=%o\nRHS_D=%o\n",Pfac[1],RHS_D;
+                        vprintf ResRefCond,2 : "are roots ?\n%o\n%o\n",[ Valuation(Evaluate(Pfac[1],eps(r))) : r in rtsM],
+                                                                       [ IsWeaklyZero(Evaluate(Pfac[1],eps(r))) : r in rtsM];
+                        assert RHS_D eq Degree(Pfac[1]);
+                        Append(~RHS_D_P,RHS_D);
+                    end for;
+                    // end-precomputation
+                    // we store the output in AVh`ShimuraTaniyamaPrecomputation
+                    // < vals_F , vals_q, RHS_D_P , hp_fac >;
+                    AVh`ShimuraTaniyamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
+                catch e
+                    go:=false;
+                    prec +:=100;
+                    vprintf ResRefCond : "precision increased to %o\n",prec;
+                    vprint ResRefCond,2 : e;
+                end try;
+            until go;
         else
+            eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
             vals_F:=AVh`ShimuraTaniyamaPrecomputation[1];
             vals_q:=AVh`ShimuraTaniyamaPrecomputation[2];
             RHS_D_P:=AVh`ShimuraTaniyamaPrecomputation[3];
@@ -231,7 +248,11 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
         ////////////////----Shimura-Taniyama----///////////////////
         st_tests:=[];
         for iP in [1..#vals_F] do
-            RHS_N:=#[ r : r in rtsM_PHI | Valuation(Evaluate(hp_fac[iP],eps(r))) gt (prec div 2) ];
+            // workaround
+                is_zero:=[ Valuation(Evaluate(hp_fac[iP],eps(r))) : r in rtsM_PHI ];
+                max:=Max(is_zero);
+                RHS_N:=#[ rtsM_PHI[i] : i in [1..#rtsM_PHI] | is_zero[i] gt Round(0.95*max) ];
+            // end workaround
             LHS:=vals_F[iP]/vals_q[iP];
             RHS:=RHS_N/RHS_D_P[iP];
             Append(~st_tests, LHS eq RHS );
@@ -252,7 +273,7 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecisio
 }
     vprintf ResRefCond : "pAdicReflexField\n";
     prec:=MinPrecision;
-    if not assigned PHI`pAdicReflexField then
+    if not assigned PHI`pAdicReflexField or MinPrecision gt Precision(PHI`pAdicReflexField) then
         repeat
             go:=true;
             try
@@ -287,7 +308,7 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
     Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh)
 }
     vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
-    if not assigned PHI`IsResidueReflexFieldEmbeddable then
+    if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(AVh`pAdicSplittingField) then
         q:=FiniteField(AVh);
         p:=CharacteristicFiniteField(AVh);
         N:=pAdicSplittingField(AVh : MinPrecision:=MinPrecision);
@@ -558,6 +579,10 @@ end intrinsic;
     //triggering errors in ShimuraTaniyma
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+
     PP<x>:=PolynomialRing(Integers());
     SetVerbose("ResRefCond",2);
     polys:=[
