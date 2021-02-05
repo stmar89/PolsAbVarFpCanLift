@@ -47,12 +47,36 @@ declare attributes AlgAssCMType : ComplexRoots; // <rtsM,map> where
 // Splitting Fields  //
 ///////////////////////    
 
-intrinsic RationalSplittingField(AVh::IsogenyClassFq) -> FldNum,SeqEnum
+intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari") -> FldNum,SeqEnum
 { 
     Returns the splitting field over Q of the Weil polynomial of the isogeny class.
-}   
+    The vararg can be either "Pari" or "Magma" and decides whether the compoutation is outsourced to Pari or not.
+}  
+    require Method in {"Pari","Magma") : "the method selected is not recognized" ;
     if not assigned AVh`RationalSplittingField then
-        M,rtsM:=SplittingField(WeilPolynomial(AVh));
+        if Method eq "Pari" then
+            try
+                cmd := Sprintf(
+                       "{
+                       f = Pol(Vecrev(%o),'x); 
+                       M = nfsplitting(f); 
+                       rtsM = nfisincl(f,M); 
+                       print1([Vecrev(M),[ Vecrev(t) | t<-rtsM ]])
+                       }",
+                       Coefficients(f));
+                s := Pipe("gp -q -D timer=0", cmd);
+                s := eval("<" cat s[2..#s-2] cat ">");
+                M:=NumberField(PP!s[1]);
+                rtsM:=[ M ! r : r in s[2]];
+                assert #rtsM eq Degree(f);
+                assert2 forall{ r : r in rtsM | Evaluate(f,r) eq 0};
+            catch e
+                printf "Pari is not installed/set-up correctly (don't forget to increase parisizemax). We switch to Magma.\n"; 
+                M,rtsM:=SplittingField(WeilPolynomial(AVh));
+            end try;
+        elif Method eq "Magma" then
+            M,rtsM:=SplittingField(WeilPolynomial(AVh));
+        end if;
         AVh`RationalSplittingField:=<M,rtsM>;
     end if;
     return AVh`RationalSplittingField[1],AVh`RationalSplittingField[2];
@@ -73,7 +97,8 @@ intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLoc
             try
                 Zp:=pAdicRing(p,prec);
                 M:=SplittingField(h,Zp);
-                N:=LocalField(FieldOfFractions(Zp),DefiningPolynomial(M,Zp));
+                N:=LocalField(FieldOfFractions(Zp),DefiningPolynomial(M,Zp)); // we use LocalField because we need 
+                                                                              // to construct subfields.
                 rtsN:=[ r[1] : r in Roots(h,N) ];
             catch e
                 go:=false;
@@ -87,14 +112,15 @@ intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLoc
     return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2];
 end intrinsic;
 
-intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30) -> Map
+intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari") -> Map
 { 
     An embedding from RationalSplittingField to pAdicSplittingField.
     The vararg MinPrecision sets the minimal precision.
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }   
     vprint ResRefCond : "EmbeddingOfSplittingFields\n";
     if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(Codomain(AVh`EmbeddingOfSplittingFields)) then
-        M,rtsM:=RationalSplittingField(AVh);
+        M,rtsM:=RationalSplittingField(AVh : Method:=Method);
         h:=WeilPolynomial(AVh);
         prec:=MinPrecision;
         repeat
@@ -136,14 +162,15 @@ end intrinsic;
 ///////////////////////////////    
 
 
-intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType) -> FldNum,SeqEnum
+intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" ) -> FldNum,SeqEnum
 {
     Returns a set of g=Dimension(AVh) roots of h=WeilPolynomial(AVh) in the M=RationalSplittingField(AVh) and the embedding M->ComplexField() inducing the correspondence.
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }   
     if not assigned PHI`ComplexRoots then
         F:=FrobeniusEndomorphism(AVh)(1);
         deg:=Degree(Parent(F));
-        M,rtsM:=RationalSplittingField(AVh);
+        M,rtsM:=RationalSplittingField(AVh : Method:=Method );
         map:=hom<M->ComplexField() | x:->Conjugates(x)[1] >;
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
@@ -171,9 +198,10 @@ end intrinsic;
 // Shimura-Taniyama  //
 ///////////////////////    
 
-intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
+intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30 , Method:="Pari" ) -> BoolElt
 {   
     Returns wheter a CM-type satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
     vprintf ResRefCond : "ShimuraTaniyama\n";
     if not assigned PHI`ShimuraTaniyama then
@@ -183,10 +211,11 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
             repeat
                 go:=true;
                 try
-                    eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
+                    eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec, Method:=Method );
                     // pre-computation, does not depend on PHI. Should be computed only once.
                     q:=FiniteField(AVh);
-                    M,rtsM:=RationalSplittingField(AVh);
+                    assert assigned AVh`RationalSplittingField;
+                    M,rtsM:=RationalSplittingField(AVh); // we do not use Domain(eps), since we need the roots as well.
                     N:=Codomain(eps); 
                     p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
                     L:=UniverseAlgebra(AVh);
@@ -236,14 +265,11 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                 end try;
             until go;
         else
-            eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
-            vals_F:=AVh`ShimuraTaniyamaPrecomputation[1];
-            vals_q:=AVh`ShimuraTaniyamaPrecomputation[2];
-            RHS_D_P:=AVh`ShimuraTaniyamaPrecomputation[3];
-            hp_fac:=AVh`ShimuraTaniyamaPrecomputation[4];
+            eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec : Method:=Method);
+            vals_F, vals_q, RHS_D_P, hp_fac := Explode(AVh`ShimuraTaniyamaPrecomputation);
         end if;
 
-        rtsM_PHI:=ComplexRoots(AVh,PHI); 
+        rtsM_PHI:=ComplexRoots(AVh,PHI : Method:=Method ); 
         vprintf ResRefCond : "ComplexRoots = %o",rtsM_PHI;
         ////////////////----Shimura-Taniyama----///////////////////
         st_tests:=[];
@@ -267,9 +293,10 @@ end intrinsic;
 // pAdicReflexField  //
 ///////////////////////
 
-intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
+intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari" ) -> BoolElt
 {   
-    Returns the reflex field associated to the CM-type as a subfield of pAdicSplittingField
+    Returns the reflex field associated to the CM-type as a subfield of pAdicSplittingField.
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
     vprintf ResRefCond : "pAdicReflexField\n";
     prec:=MinPrecision;
@@ -278,10 +305,10 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecisio
             go:=true;
             try
                 h:=WeilPolynomial(AVh);
-                eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec);
+                eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec , Method:=Method );
                 N:=Codomain(eps);
                 assert N cmpeq pAdicSplittingField(AVh);
-                rtsM_PHI:=ComplexRoots(AVh,PHI); 
+                rtsM_PHI:=ComplexRoots(AVh,PHI : Method:=Method ); 
                 h_fac:=[ hi[1] : hi in Factorization(h)];
                 gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
                 gens_E:=[ eps(g) : g in gens_E_inM ];
@@ -303,9 +330,10 @@ end intrinsic;
 // IsResidueReflexFieldEmbeddable  //
 /////////////////////////////////////
 
-intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30) -> BoolElt
+intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari") -> BoolElt
 {   
-    Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh)
+    Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
     vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
     if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(AVh`pAdicSplittingField) then
@@ -323,7 +351,7 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
             vprint ResRefCond : "early exit on N";
         else
             vprint ResRefCond : "no early exit on N";
-            E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision);
+            E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
             kE:=ResidueClassField(E);
             PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,#kE) eq 0;
         end if;
@@ -335,29 +363,31 @@ end intrinsic;
 // Chai-Conrad-Oort : Residual reflex condition //
 /////////////////////////////////////////////////    
 
-intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgCMType : MinPrecision:=30) -> BoolElt 
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgCMType : MinPrecision:=30 , Method:="Pari") -> BoolElt 
 {   
     It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
-    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
+    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description. 
 }
     vprintf ResRefCond : "ResidualReflexConditioni\n";
-    st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision );
-    resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
+    st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
+    resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
     return st and resrefl;
 end intrinsic;
 
 
-intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMType]
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari" ) -> SeqEnum[AlgAssCMType]
 {   
     It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
@@ -370,9 +400,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30) -> Seq
     if not assigned AVh`RRC_CMTypes then
         rrc_cms:=[];
         for PHI in AllCMTypes(AVh) do
-            st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision );
-            resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision );
-            if st and resrefl then
+            if ResidualReflexCondition(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method)  then
                 Append(~rrc_cms,PHI);
             end if;
         end for;
@@ -576,7 +604,8 @@ end intrinsic;
     end for;
 
 
-    //triggering errors in ShimuraTaniyma
+    // triggering errors in ShimuraTaniyma
+    // now FIXED
     AttachSpec("packages/AbVarFq/packages.spec");
     Attach("packages/PolsAbVarFpCanLift/ResRefCond.m");
 
@@ -584,7 +613,7 @@ end intrinsic;
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
 
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",2);
+    // SetVerbose("ResRefCond",2);
     polys:=[
         x^8 - x^6 + 12*x^4 - 9*x^2 + 81,
         x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81,
@@ -609,6 +638,40 @@ end intrinsic;
         for PHI in all_cm do
             ShimuraTaniyama(Ih,PHI);
         end for;
+    end for;
+
+    // outsourcing computations to pari/gp
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+
+    PP<x>:=PolynomialRing(Integers());
+    // SetVerbose("ResRefCond",2);
+    // all these polys have very big Galois group (size 192 or 384)
+    polys:=[
+        x^8 - 3*x^7 + 6*x^6 - 10*x^5 + 14*x^4 - 20*x^3 + 24*x^2 - 24*x + 16,
+        x^8 - 2*x^7 + 2*x^5 - 2*x^4 + 4*x^3 - 16*x + 16,
+        x^8 - 2*x^7 + 2*x^6 - 2*x^4 + 8*x^2 - 16*x + 16,
+        x^8 - 2*x^7 + 2*x^6 + 2*x^5 - 6*x^4 + 4*x^3 + 8*x^2 - 16*x + 16,
+        x^8 - 2*x^7 + 4*x^6 - 6*x^5 + 10*x^4 - 12*x^3 + 16*x^2 - 16*x + 16,
+        x^8 - x^7 - 2*x^5 + 4*x^4 - 4*x^3 - 8*x + 16,
+        x^8 - x^7 - 2*x^5 + 6*x^4 - 4*x^3 - 8*x + 16,
+        x^8 - x^7 + 2*x^4 - 8*x + 16,
+        x^8 - x^7 + x^6 - 2*x^5 + 4*x^4 - 4*x^3 + 4*x^2 - 8*x + 16,
+        x^8 - x^7 + x^6 - 2*x^4 + 4*x^2 - 8*x + 16,
+        x^8 - x^7 + x^6 + 4*x^2 - 8*x + 16,
+        x^8 - x^7 + 2*x^6 - 2*x^5 + 4*x^4 - 4*x^3 + 8*x^2 - 8*x + 16,
+        x^8 - x^7 + 2*x^6 - 2*x^5 + 6*x^4 - 4*x^3 + 8*x^2 - 8*x + 16,
+        x^8 - x^7 + 2*x^6 + 2*x^4 + 8*x^2 - 8*x + 16,
+        x^8 - x^7 + 3*x^6 - 4*x^5 + 6*x^4 - 8*x^3 + 12*x^2 - 8*x + 16,
+        x^8 - x^7 + 3*x^6 - 2*x^5 + 6*x^4 - 4*x^3 + 12*x^2 - 8*x + 16,
+        x^8 - 2*x^5 - 2*x^4 - 4*x^3 + 16,
+        x^8 - 2*x^5 - 4*x^3 + 16
+        ];
+
+    for h in polys do
+        Ih:=IsogenyClass(h);
+        #GaloisGroup(h);
+        time ResidueReflexCondition(If); //~6 minutes, depends on machine.
     end for;
 
 */
