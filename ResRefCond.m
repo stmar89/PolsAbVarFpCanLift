@@ -62,12 +62,13 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari") -> FldNum
                 cmd := Sprintf(
                        "{
                        h = Pol(Vecrev(%o),'x); 
-                       M = subst(nfsplitting(h,%o),x,y);
-                       rtsM = [ lift(-Vecrev(t)[1]) | t<-Vec(nffactor(M,h))[1]];
+                       M = nfsplitting(h,%o);
+                       rtsM = concat([ nfisincl(g,M) | g<-Vec(factor(h,1))[1] ]);
                        print1([Vecrev(M),[ Vecrev(t) | t<-rtsM ]])
                        }",
-                       Coefficients(h),#GaloisGroup(h)); // addding the deg of the splitting fields
-                                                        // speeds up the computation
+                       Coefficients(h),#GaloisGroup(h)); // Addding the deg of the splitting fields
+                                                         // Speeds up the computation
+                                                         // Note: nfisincl is vastly faster than nffactor
                 s := Pipe("gp -q -D timer=0", cmd);
                 s := eval("<" cat s[2..#s-2] cat ">");
                 M:=NumberField(Parent(h)!s[1]);
@@ -600,9 +601,9 @@ end intrinsic;
     // problematic polys
     // Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
     polys:=[
-        //x^6 - 2*x^5 + 4*x^3 - 8*x + 8, 
-        //x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
-        //x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16,
+        x^6 - 2*x^5 + 4*x^3 - 8*x + 8, 
+        x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
+        x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16,
         x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81
     ];
     
@@ -659,24 +660,19 @@ end intrinsic;
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",0);
-    // not too big example.
-    h:=x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81;
-    Ih:=IsogenyClass(h);
-    #GaloisGroup(h);
-    time RationalSplittingField(Ih);     
-    // all these polys have very big Galois group (size 192 or 384)
+    SetVerbose("ResRefCond",1);
     polys:=[
-        x^8 - 2*x^5 - 2*x^4 - 4*x^3 + 16,
-        x^8 - 2*x^7 + 2*x^5 - 2*x^4 + 4*x^3 - 16*x + 16,
-        x^8 - 2*x^5 - 4*x^3 + 16,
-        x^8 - 3*x^7 + 6*x^6 - 10*x^5 + 14*x^4 - 20*x^3 + 24*x^2 - 24*x + 16
+        x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81, // irred, small
+        x^8 + 2*x^7 + 3*x^6 - 9*x^5 - 18*x^4 - 27*x^3 + 27*x^2 + 54*x + 81, // not irred, small
+        x^8 - 2*x^5 - 2*x^4 - 4*x^3 + 16, // deg 192
+        x^8 - 2*x^7 + 2*x^5 - 2*x^4 + 4*x^3 - 16*x + 16, // deg 192
+        x^8 - 2*x^5 - 4*x^3 + 16, // deg 384, ~5mins
+        x^8 - 3*x^7 + 6*x^6 - 10*x^5 + 14*x^4 - 20*x^3 + 24*x^2 - 24*x + 16 // deg 384, ~5mins
         ];
 
     for h in polys do
         Ih:=IsogenyClass(h);
-        #GaloisGroup(h);
-        Degree(pAdicSplittingField(Ih));
+        "degree of splitting field =", #GaloisGroup(h);
         time _:=RationalSplittingField(Ih);
     end for;
 
