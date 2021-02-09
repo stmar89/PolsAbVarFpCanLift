@@ -93,12 +93,12 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari") -> FldNum
     return AVh`RationalSplittingField[1],AVh`RationalSplittingField[2];
 end intrinsic;
 
-intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,SeqEnum
+intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,FldPad,Map
 { 
-    Returns the splitting field over Qp of the Weil polynomial of the isogeny class. 
+    Returns the splitting field as RngLocA over Qp of the Weil polynomial of the isogeny class, the corresponding FldPad and an isomorphism.
     The vararg MinPrecision sets the minimal precision.
 }   
-    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(AVh`pAdicSplittingField[1]) then
+    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(AVh`pAdicSplittingField[2]) then
         vprint ResRefCond : "pAdicSplittingField";
         h:=WeilPolynomial(AVh);
         _,p:=IsPrimePower(FiniteField(AVh));
@@ -106,62 +106,66 @@ intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLoc
         repeat
             go:=true;
             try
-                Zp:=pAdicRing(p,prec);
-                M:=SplittingField(h,Zp);
-                N:=LocalField(FieldOfFractions(Zp),DefiningPolynomial(M,Zp)); // we use LocalField because we need 
+                Qp:=pAdicField(p,prec);
+                hp:=ChangeRing(h,Qp);
+                N0:=SplittingField(hp);
+                Qp:=PrimeField(N0);
+                vprintf ResRefCond,2: "Precision(N0)=%o\nPrecision(PrimeField(N0))=%o\n",Precision(N0),Precision(Qp);
+                hp:=ChangeRing(h,Qp);
+                N:=LocalField(Qp,DefiningPolynomial(N0,Qp)); // we use LocalField because we need 
                                                                               // to construct subfields.
-                rtsN:=[ r[1] : r in Roots(h,N) ];
+                //map:=map< N0->N | x:-> &+[N.1^(i-1)*Eltseq(x)[i] : i in [1..AbsoluteDegree(N0)]] >;
+                N0,map:=RamifiedRepresentation(N);
+                map:=Inverse(map);
+                assert forall{ r : r in Roots(h,N) | IsWeaklyZero(Evaluate(h,r[1])) };
+                assert forall{ r : r in Roots(h,N0) | IsWeaklyZero(Evaluate(h,map(r[1]))) };
             catch e
                 go:=false;
-                prec +:=50;
+                prec+:=100;
                 vprintf ResRefCond : "precision increased to %o\n",prec;
                 vprint ResRefCond,2 : e;
             end try;
         until go;
-        AVh`pAdicSplittingField:=<N,rtsN>;
+        AVh`pAdicSplittingField:=<N,N0,map>;
     end if;
-    return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2];
+    return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2],AVh`pAdicSplittingField[3];
 end intrinsic;
 
 intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari") -> Map
 { 
     An embedding from RationalSplittingField to pAdicSplittingField.
-    The vararg MinPrecision sets the minimal precision.
+    The vararg MinPrecision sets the minimal precision.1
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }   
-    if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(Codomain(AVh`EmbeddingOfSplittingFields)) then
+    if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(BaseRing(Codomain(AVh`EmbeddingOfSplittingFields))) then
         vprint ResRefCond : "EmbeddingOfSplittingFields";
         M,rtsM:=RationalSplittingField(AVh : Method:=Method);
+        m:=DefiningPolynomial(M);
         h:=WeilPolynomial(AVh);
         prec:=MinPrecision;
         repeat
             go:=true;
             try
-                N:=pAdicSplittingField(AVh : MinPrecision:=2*prec);
-               
-                rtsMinN:=[ r[1] : r in Roots(PolynomialRing(N)!DefiningPolynomial(M)) ];
-                is_root:=false;
-                // loop over all the roots, hoping to keep the precision down
-                for rr in rtsMinN do
-                    eps:=hom<M->N | rr >; // a choice of eps:M->N. 
-                                          // exists because both M and N are splitting fields 
-                    is_root_M:=IsWeaklyZero(Evaluate(DefiningPolynomial(M),eps(M.1))); 
-                                    // we test that the image of the primitive root 
-                                    // of M is sent by eps to a root of def poly of M
-                    is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
-                                                                                    // similarly, we test that the roots of h in M 
-                                                                                    // are sent to roots of h in N
-                    if is_root_M and is_root_h then
-                        break rr;
-                    end if;
-                end for;
+                N,N0,map:=pAdicSplittingField(AVh : MinPrecision:=prec);
+                test,rr:=HasRoot(m,N0); 
+                assert test;
+                assert IsWeaklyZero(Evaluate(m,rr));
+                eps:=hom<M->N | [ map(rr)]  >; // a choice of eps:M->N. 
+                                      // exists because both M and N are splitting fields 
+                is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); 
+                                // we test that the image of the primitive root 
+                                // of M is sent by eps to a root of def poly of M
+                is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+                                                                                // similarly, we test that the roots of h in M 
+                                                                                // are sent to roots of h in N
                 assert is_root_M;
                 assert is_root_h;
             catch e
                 go:=false;
                 prec+:=100;
-                vprintf ResRefCond,2 : "failed to verify the bijection between the roots of h:\nPrecision(N)=%o\n",Precision(N);
-                vprint ResRefCond,2 : Valuation(Evaluate(DefiningPolynomial(M),eps(M.1)));
+                vprintf ResRefCond,2: "Precision(N0)=%o\nPrecision(PrimeField(N0))=%o\n",Precision(N0),Precision(PrimeField(N0));
+                vprintf ResRefCond : "root found %o\n",rr;
+                vprint ResRefCond,2 : Valuation(Evaluate(m,eps(M.1)));
                 vprint ResRefCond,2 : [ Valuation(Evaluate(h,eps(rM))) : rM in rtsM ];
                 vprintf ResRefCond : "precision increased to %o\n",prec;
                 vprint ResRefCond,2 : e;
@@ -172,10 +176,89 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
     return AVh`EmbeddingOfSplittingFields;
 end intrinsic;
 
+// OLD 
+// intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,SeqEnum
+// { 
+//     Returns the splitting field over Qp of the Weil polynomial of the isogeny class. 
+//     The vararg MinPrecision sets the minimal precision.
+// }   
+//     if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(AVh`pAdicSplittingField[1]) then
+//         vprint ResRefCond : "pAdicSplittingField";
+//         h:=WeilPolynomial(AVh);
+//         _,p:=IsPrimePower(FiniteField(AVh));
+//         prec:=MinPrecision;
+//         repeat
+//             go:=true;
+//             try
+//                 Zp:=pAdicRing(p,prec);
+//                 M:=SplittingField(h,Zp);
+//                 N:=LocalField(FieldOfFractions(Zp),DefiningPolynomial(M,Zp)); // we use LocalField because we need 
+//                                                                               // to construct subfields.
+//                 rtsN:=[ r[1] : r in Roots(h,N) ];
+//             catch e
+//                 go:=false;
+//                 prec +:=50;
+//                 vprintf ResRefCond : "precision increased to %o\n",prec;
+//                 vprint ResRefCond,2 : e;
+//             end try;
+//         until go;
+//         AVh`pAdicSplittingField:=<N,rtsN>;
+//     end if;
+//     return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2];
+// end intrinsic;
+// 
+// intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari") -> Map
+// { 
+//     An embedding from RationalSplittingField to pAdicSplittingField.
+//     The vararg MinPrecision sets the minimal precision.
+//     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
+// }   
+//     if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(Codomain(AVh`EmbeddingOfSplittingFields)) then
+//         vprint ResRefCond : "EmbeddingOfSplittingFields";
+//         M,rtsM:=RationalSplittingField(AVh : Method:=Method);
+//         h:=WeilPolynomial(AVh);
+//         prec:=MinPrecision;
+//         repeat
+//             go:=true;
+//             try
+//                 N:=pAdicSplittingField(AVh : MinPrecision:=2*prec);
+//                
+//                 rtsMinN:=[ r[1] : r in Roots(PolynomialRing(N)!DefiningPolynomial(M)) ];
+//                 is_root:=false;
+//                 // loop over all the roots, hoping to keep the precision down
+//                 for rr in rtsMinN do
+//                     eps:=hom<M->N | rr >; // a choice of eps:M->N. 
+//                                           // exists because both M and N are splitting fields 
+//                     is_root_M:=IsWeaklyZero(Evaluate(DefiningPolynomial(M),eps(M.1))); 
+//                                     // we test that the image of the primitive root 
+//                                     // of M is sent by eps to a root of def poly of M
+//                     is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+//                                                                                     // similarly, we test that the roots of h in M 
+//                                                                                     // are sent to roots of h in N
+//                     if is_root_M and is_root_h then
+//                         break rr;
+//                     end if;
+//                 end for;
+//                 assert is_root_M;
+//                 assert is_root_h;
+//             catch e
+//                 go:=false;
+//                 prec+:=100;
+//                 vprintf ResRefCond,2 : "failed to verify the bijection between the roots of h:\nPrecision(N)=%o\n",Precision(N);
+//                 vprint ResRefCond,2 : Valuation(Evaluate(DefiningPolynomial(M),eps(M.1)));
+//                 vprint ResRefCond,2 : [ Valuation(Evaluate(h,eps(rM))) : rM in rtsM ];
+//                 vprintf ResRefCond : "precision increased to %o\n",prec;
+//                 vprint ResRefCond,2 : e;
+//             end try;
+//         until go;
+//         AVh`EmbeddingOfSplittingFields:=eps;
+//     end if;
+//     return AVh`EmbeddingOfSplittingFields;
+// end intrinsic;
+
 ///////////////////////////////    
 // ComplexRoots of a CMType  //
 ///////////////////////////////    
-
 
 intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" ) -> FldNum,SeqEnum
 {
@@ -580,7 +663,8 @@ end intrinsic;
     
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-
+    SetVerbose("ResRefCond",2);
+    SetAssertions(2);
     PP<x>:=PolynomialRing(Integers());
     polys:=[
         (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25), //early exit on N. fast
@@ -611,9 +695,9 @@ end intrinsic;
         h;
         AVh:=IsogenyClass(h);
         AVh,pRank(AVh);
-        _:=RationalSplittingField(AVh);
-        _:=pAdicSplittingField(AVh);
-        _:=EmbeddingOfSplittingFields(AVh);
+        time _:=RationalSplittingField(AVh);
+        time _:=pAdicSplittingField(AVh);
+        time _:=EmbeddingOfSplittingFields(AVh);
 
         cms:=AllCMTypes(AVh);
         for i->PHI in cms do
@@ -628,7 +712,7 @@ end intrinsic;
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",1);
+    SetVerbose("ResRefCond",2);
     // triggering errors in ShimuraTaniyma. FIXED
     polys:=[
         x^8 - x^6 + 12*x^4 - 9*x^2 + 81,
@@ -660,8 +744,10 @@ end intrinsic;
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",1);
+    SetVerbose("ResRefCond",0);
+    SetAssertions(1);
     polys:=[
+        x^8+16,
         x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81, // irred, small
         x^8 + 2*x^7 + 3*x^6 - 9*x^5 - 18*x^4 - 27*x^3 + 27*x^2 + 54*x + 81, // not irred, small
         x^8 - 2*x^5 - 2*x^4 - 4*x^3 + 16, // deg 192
@@ -671,9 +757,12 @@ end intrinsic;
         ];
 
     for h in polys do
-        Ih:=IsogenyClass(h);
+        AVh:=IsogenyClass(h);
         "degree of splitting field =", #GaloisGroup(h);
-        time _:=RationalSplittingField(Ih);
+        time _:=RationalSplittingField(AVh);
+        time _:=pAdicSplittingField(AVh);
+        time _:=EmbeddingOfSplittingFields(AVh);
+        time #ResidualReflexCondition(AVh);
     end for;
 
 */
