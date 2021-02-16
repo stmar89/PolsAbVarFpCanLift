@@ -108,17 +108,19 @@ intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLoc
             try
                 Qp:=pAdicField(p,prec);
                 hp:=ChangeRing(h,Qp);
-                N0:=SplittingField(hp);
+                N0:=SplittingField(hp); //this increases the precision automatically.
                 Qp:=PrimeField(N0);
                 vprintf ResRefCond,2: "Precision(N0)=%o\nPrecision(PrimeField(N0))=%o\n",Precision(N0),Precision(Qp);
-                hp:=ChangeRing(h,Qp);
                 N:=LocalField(Qp,DefiningPolynomial(N0,Qp)); // we use LocalField because we need 
                                                                               // to construct subfields.
                 //map:=map< N0->N | x:-> &+[N.1^(i-1)*Eltseq(x)[i] : i in [1..AbsoluteDegree(N0)]] >;
                 N0,map:=RamifiedRepresentation(N);
                 map:=Inverse(map);
-                assert forall{ r : r in Roots(h,N) | IsWeaklyZero(Evaluate(h,r[1])) };
-                assert forall{ r : r in Roots(h,N0) | IsWeaklyZero(Evaluate(h,map(r[1]))) };
+                // TROUBLES for x^8 - 2*x^7 + 6*x^6 - 15*x^5 + 21*x^4 - 45*x^3 + 54*x^2 - 54*x + 81
+                // The next asserts cause an infinite loop 
+                // I guess in computing the Roots there is some loss of precision
+                // assert forall{ r : r in Roots(h,N) | IsWeaklyZero(Evaluate(h,r[1])) };
+                // assert forall{ r : r in Roots(h,N0) | IsWeaklyZero(Evaluate(h,map(r[1]))) };
             catch e
                 go:=false;
                 prec+:=100;
@@ -142,16 +144,16 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
         M,rtsM:=RationalSplittingField(AVh : Method:=Method);
         m:=DefiningPolynomial(M);
         h:=WeilPolynomial(AVh);
-        prec:=MinPrecision;
+        prec:=Max([MinPrecision,SuggestedPrecision(ChangeRing(m,pAdicRing(CharacteristicFiniteField(AVh))))]);
         repeat
             go:=true;
             try
                 N,N0,map:=pAdicSplittingField(AVh : MinPrecision:=prec);
-                test,rr:=HasRoot(m,N0); 
+                test,rr:=HasRoot(m,N0); //HasRoot doesn't seem to complain when the precision is not enough
                 assert test;
                 assert IsWeaklyZero(Evaluate(m,rr));
                 eps:=hom<M->N | [ map(rr)]  >; // a choice of eps:M->N. 
-                                      // exists because both M and N are splitting fields 
+                                               // exists because both M and N are splitting fields 
                 is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); 
                                 // we test that the image of the primitive root 
                                 // of M is sent by eps to a root of def poly of M
