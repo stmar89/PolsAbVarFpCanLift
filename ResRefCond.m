@@ -438,7 +438,7 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
     Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
-    if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(AVh`pAdicSplittingField) then
+    if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField[1])) then
         vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
         q:=FiniteField(AVh);
         p:=CharacteristicFiniteField(AVh);
