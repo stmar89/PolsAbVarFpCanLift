@@ -154,10 +154,12 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
                 assert IsWeaklyZero(Evaluate(m,rr));
                 eps:=hom<M->N | [ map(rr)]  >; // a choice of eps:M->N. 
                                                // exists because both M and N are splitting fields 
-                is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); 
+                //is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); //I am tired of IsWeaklyZero...
+                is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(N)) ; 
                                 // we test that the image of the primitive root 
                                 // of M is sent by eps to a root of def poly of M
-                is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+                //is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+                is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(N))};
                                                                                 // similarly, we test that the roots of h in M 
                                                                                 // are sent to roots of h in N
                 assert is_root_M;
