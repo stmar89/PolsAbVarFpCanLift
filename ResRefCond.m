@@ -36,6 +36,7 @@ declare attributes IsogenyClassFq : pAdicSplittingField; // as above, but over Q
 declare attributes IsogenyClassFq : EmbeddingOfSplittingFields; // an embedding from RationalSplittingField to pAdicSplittingField
 
 declare attributes AlgAssCMType : pAdicReflexField; // a subfield of pAdicSplittingFeld corresponding to the reflex field
+declare attributes AlgAssCMType : RationalReflexField; // a subfield of RationalSplittingFeld corresponding to the reflex field
 declare attributes AlgAssCMType : IsResidueReflexFieldEmbeddable; // a boolean: if k_E subset F_q
 declare attributes AlgAssCMType : ShimuraTaniyama; // add descriptior 
 declare attributes IsogenyClassFq :ShimuraTaniyamaPrecomputation; // data that does not depend on the CM-type. To avoid recomputation
@@ -392,6 +393,30 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
     return PHI`ShimuraTaniyama;
 end intrinsic;
 
+//////////////////////////
+// RationalReflexField  //
+//////////////////////////
+
+intrinsic RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari" ) -> BoolElt
+{   
+    Returns the reflex field associated to the CM-type as a subfield of RationalSplittingField.
+    The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
+}
+    if not assigned PHI`RationalReflexField then
+        vprint ResRefCond : "RationalReflexField";
+        h:=WeilPolynomial(AVh);
+        rtsM_PHI:=ComplexRoots(AVh,PHI : Method:=Method ); 
+        M:=Parent(rtsM_PHI[1]); //M:=RationalSplittingField
+        h_fac:=[ hi[1] : hi in Factorization(h)];
+        gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
+        vprintf ResRefCond : "creating subfield ...";
+        E:=sub< M | gens_E_inM >;
+        vprintf ResRefCond : "...done\n";
+        PHI`RationalReflexField:=E;
+    end if;
+    return PHI`RationalReflexField;
+end intrinsic;
+
 ///////////////////////
 // pAdicReflexField  //
 ///////////////////////
@@ -435,30 +460,41 @@ end intrinsic;
 // IsResidueReflexFieldEmbeddable  //
 /////////////////////////////////////
 
-intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari") -> BoolElt
+intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari", MethodReflexField:="pAdic") -> BoolElt
 {   
     Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
+    The vararg MethodReflexField can be either "pAdic" or "Rational" and decides whether the reflex field is computed as a subfield of the pAdicSplittingField or the RationalSplittingField.
 }
+    require MethodReflexField in {"pAdic","Rational"} : "MethodReflexField should be either pAdic or Rational";
     if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField[2])) then
         vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
         q:=FiniteField(AVh);
         p:=CharacteristicFiniteField(AVh);
-        N:=pAdicSplittingField(AVh : MinPrecision:=MinPrecision);
-        // (early exit on N)
-        // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
-        // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
-        // the reflex fields.
-        // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
-        // which is the bottleneck of function. In particular refl_fields will be left empty
-        if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
-            PHI`IsResidueReflexFieldEmbeddable:=true;
-            vprint ResRefCond : "early exit on N";
-        else
-            vprint ResRefCond : "no early exit on N";
-            E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
-            kE:=ResidueClassField(E);
-            PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,#kE) eq 0;
+        if MethodReflexField eq "pAdic" then
+            N:=pAdicSplittingField(AVh : MinPrecision:=MinPrecision);
+            // (early exit on N)
+            // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
+            // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
+            // the reflex fields.
+            // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
+            // which is the bottleneck of function. In particular refl_fields will be left empty
+            if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
+                PHI`IsResidueReflexFieldEmbeddable:=true;
+                vprint ResRefCond : "early exit on N";
+            else
+                vprint ResRefCond : "no early exit on N";
+                E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
+                kE:=ResidueClassField(E);
+                PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,#kE) eq 0;
+            end if;
+        elif MethodReflexField eq "Rational" then
+            E:=RationalReflexField(AVh,PHI : Method:=Method);
+            pp:=Decomposition(E,p : Al:="Montes");
+            res:=[ #ResidueClassField(P[1]) : P in pp ];
+            assert #Seqset(res) eq 1; // all primes should have the same res field
+            kE:=res[1];
+            PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,kE) eq 0;
         end if;
     end if;
     return PHI`IsResidueReflexFieldEmbeddable;
@@ -468,7 +504,7 @@ end intrinsic;
 // Chai-Conrad-Oort : Residual reflex condition //
 /////////////////////////////////////////////////    
 
-intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30 , Method:="Pari") -> BoolElt 
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30 , Method:="Pari", MethodReflexField:="pAdic") -> BoolElt 
 {   
     It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
@@ -482,8 +518,8 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinP
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description. 
 }
     vprintf ResRefCond : "ResidualReflexConditioni\n";
-    st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
-    resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
+    st:=ShimuraTaniyama(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method);
+    resrefl:=IsResidueReflexFieldEmbeddable(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method, MethodReflexField:=MethodReflexField );
     return st and resrefl;
 end intrinsic;
 
@@ -688,6 +724,7 @@ end intrinsic;
     PP<x>:=PolynomialRing(Integers());
     // problematic polys
     // Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
+    // need to use MethodReflexField:="Rational"
     polys:=[
         x^6 - 2*x^5 + 4*x^3 - 8*x + 8, 
         x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
@@ -699,16 +736,16 @@ end intrinsic;
         h;
         AVh:=IsogenyClass(h);
         AVh,pRank(AVh);
-        time _:=RationalSplittingField(AVh);
-        time _:=pAdicSplittingField(AVh);
-        time _:=EmbeddingOfSplittingFields(AVh);
+        time _:=RationalSplittingField(AVh : Method:="Pari");
+        //time _:=pAdicSplittingField(AVh);
+        //time _:=EmbeddingOfSplittingFields(AVh);
 
         cms:=AllCMTypes(AVh);
         for i->PHI in cms do
             i;
             time ShimuraTaniyama(AVh,PHI);
-            time _:=pAdicReflexField(AVh,PHI);
-            time IsResidueReflexFieldEmbeddable(AVh,PHI);
+            // time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="pAdic"); //Magma Int Err
+            time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="Rational");
         end for;
     end for;
 
