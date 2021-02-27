@@ -276,13 +276,14 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" 
         F:=FrobeniusEndomorphism(AVh)(1);
         deg:=Degree(Parent(F));
         M,rtsM:=RationalSplittingField(AVh : Method:=Method );
-        map:=hom<M->ComplexField() | x:->Conjugates(x)[1] >;
+        map:=hom<M->ComplexField() | x:->Conjugate(x,1) >;
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
-        assert2 b eq &+[(Coordinates([b],pow_bas_L)[1,i])*F^(i-1) : i in [1..deg]];
+        assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*F^(i-1) : i in [1..deg]];
         rtsM_PHI:=[];
+        coord_b_pow_bas:=Coordinates([b],pow_bas_L)[1];
         for FM in rtsM do
-            bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
+            bM:=&+[coord_b_pow_bas[i]*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
             assert2 bM eq -ComplexConjugate(bM); // a lot more expensive than expected
             if Im(map(bM)) gt 0 then  // this is the choice phi_0:M->CC
                                                 // which induces a bijection Hom(L,C) <-> rtsM given by
