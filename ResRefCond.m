@@ -99,7 +99,7 @@ intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLoc
     Returns the splitting field as RngLocA over Qp of the Weil polynomial of the isogeny class, the corresponding FldPad and an isomorphism.
     The vararg MinPrecision sets the minimal precision.
 }   
-    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(AVh`pAdicSplittingField[2]) then
+    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField[2])) then
         vprint ResRefCond : "pAdicSplittingField";
         h:=WeilPolynomial(AVh);
         _,p:=IsPrimePower(FiniteField(AVh));
@@ -428,7 +428,7 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecisio
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
     prec:=MinPrecision;
-    if not assigned PHI`pAdicReflexField or MinPrecision gt Precision(PHI`pAdicReflexField) then
+    if not assigned PHI`pAdicReflexField or MinPrecision gt Precision(BaseRing(PHI`pAdicReflexField)) then
         vprint ResRefCond : "pAdicReflexField";
         repeat
             go:=true;
