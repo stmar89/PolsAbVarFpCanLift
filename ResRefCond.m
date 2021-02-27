@@ -146,6 +146,7 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
         m:=DefiningPolynomial(M);
         h:=WeilPolynomial(AVh);
         prec:=Max([MinPrecision,SuggestedPrecision(ChangeRing(m,pAdicRing(CharacteristicFiniteField(AVh))))]);
+        vprintf ResRefCond : "initial precision %o\n",prec;
         repeat
             go:=true;
             try
