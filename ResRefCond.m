@@ -109,53 +109,41 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari", ComplexPr
     return Explode(AVh`RationalSplittingField);
 end intrinsic;
 
-intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,FldPad,Map
+intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> FldPad
 { 
     Returns the splitting field as RngLocA over Qp of the Weil polynomial of the isogeny class, the corresponding FldPad and an isomorphism.
     The vararg MinPrecision sets the minimal precision.
 }   
-    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField[2])) then
+    if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField)) then
         vprint ResRefCond : "pAdicSplittingField";
         h:=WeilPolynomial(AVh);
         _,p:=IsPrimePower(FiniteField(AVh));
-        prec:=MinPrecision;
+        prec:=Max([MinPrecision,SuggestedPrecision(ChangeRing(h,pAdicRing(p)))]);
         repeat
             go:=true;
             try
-                Qp:=pAdicField(p,prec);
-                hp:=ChangeRing(h,Qp);
-                N0:=SplittingField(hp); //this increases the precision automatically.
-                Qp:=PrimeField(N0);
-                vprintf ResRefCond,2: "Precision(N0)=%o\nPrecision(PrimeField(N0))=%o\n",Precision(N0),Precision(Qp);
-                N:=LocalField(Qp,DefiningPolynomial(N0,Qp)); // we use LocalField because we need 
-                                                                              // to construct subfields.
-                //map:=map< N0->N | x:-> &+[N.1^(i-1)*Eltseq(x)[i] : i in [1..AbsoluteDegree(N0)]] >;
-                N0,map:=RamifiedRepresentation(N);
-                map:=Inverse(map);
-                // TROUBLES for x^8 - 2*x^7 + 6*x^6 - 15*x^5 + 21*x^4 - 45*x^3 + 54*x^2 - 54*x + 81
-                // The next asserts cause an infinite loop 
-                // I guess in computing the Roots there is some loss of precision
-                // assert forall{ r : r in Roots(h,N) | IsWeaklyZero(Evaluate(h,r[1])) };
-                // assert forall{ r : r in Roots(h,N0) | IsWeaklyZero(Evaluate(h,map(r[1]))) };
+                hp:=ChangeRing(h,pAdicField(p,prec));
+                N:=SplittingField(hp); //this increases the precision automatically.
+                assert forall{ r : r in Roots(h,N) | IsWeaklyZero(Evaluate(h,r[1])) };
             catch e
                 go:=false;
-                prec+:=100;
+                prec:=Precision(PrimeField(N))+100;
                 vprintf ResRefCond : "precision increased to %o\n",prec;
                 vprint ResRefCond,2 : e;
             end try;
         until go;
-        AVh`pAdicSplittingField:=<N,N0,map>;
+        AVh`pAdicSplittingField:=N;
     end if;
-    return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2],AVh`pAdicSplittingField[3];
+    return AVh`pAdicSplittingField;
 end intrinsic;
 
 intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari") -> Map
 { 
     An embedding from RationalSplittingField to pAdicSplittingField.
-    The vararg MinPrecision sets the minimal precision.1
+    The vararg MinPrecision sets the minimal precision for the construction of the pAdicSplittingField.
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }   
-    if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(BaseRing(Codomain(AVh`EmbeddingOfSplittingFields))) then
+    if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(PrimeField(Codomain(AVh`EmbeddingOfSplittingFields))) then
         vprint ResRefCond : "EmbeddingOfSplittingFields";
         M,rtsM:=RationalSplittingField(AVh : Method:=Method);
         m:=DefiningPolynomial(M);
@@ -165,26 +153,27 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
         repeat
             go:=true;
             try
-                N,N0,map:=pAdicSplittingField(AVh : MinPrecision:=prec);
-                test,rr:=HasRoot(m,N0); //HasRoot doesn't seem to complain when the precision is not enough
+                vprint ResRefCond : "computing N...";
+                N:=pAdicSplittingField(AVh : MinPrecision:=prec);
+                vprint ResRefCond : "...done";
+                test,rr:=HasRoot(m,N); //HasRoot doesn't seem to complain when the precision is not enough
                 assert test;
                 assert IsWeaklyZero(Evaluate(m,rr));
-                eps:=hom<M->N | [ map(rr)]  >; // a choice of eps:M->N. 
+                eps:=hom<M->N | [ rr]  >; // a choice of eps:M->N. 
                                                // exists because both M and N are splitting fields 
-                //is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); //I am tired of IsWeaklyZero...
-                is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(N)) ; 
+                is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); //I am tired of IsWeaklyZero...
+                //is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(N)) ; 
                                 // we test that the image of the primitive root 
                                 // of M is sent by eps to a root of def poly of M
-                //is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
-                is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(N))};
+                is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+                //is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(N))};
                                                                                 // similarly, we test that the roots of h in M 
                                                                                 // are sent to roots of h in N
                 assert is_root_M;
                 assert is_root_h;
             catch e
                 go:=false;
-                prec+:=100;
-                vprintf ResRefCond,2: "Precision(N0)=%o\nPrecision(PrimeField(N0))=%o\n",Precision(N0),Precision(PrimeField(N0));
+                prec:=Precision(PrimeField(N))+100;
                 vprintf ResRefCond : "root found %o\n",rr;
                 vprint ResRefCond,2 : Valuation(Evaluate(m,eps(M.1)));
                 vprint ResRefCond,2 : [ Valuation(Evaluate(h,eps(rM))) : rM in rtsM ];
@@ -196,86 +185,6 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
     end if;
     return AVh`EmbeddingOfSplittingFields;
 end intrinsic;
-
-// OLD 
-// intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,SeqEnum
-// { 
-//     Returns the splitting field over Qp of the Weil polynomial of the isogeny class. 
-//     The vararg MinPrecision sets the minimal precision.
-// }   
-//     if not assigned AVh`pAdicSplittingField or MinPrecision gt Precision(AVh`pAdicSplittingField[1]) then
-//         vprint ResRefCond : "pAdicSplittingField";
-//         h:=WeilPolynomial(AVh);
-//         _,p:=IsPrimePower(FiniteField(AVh));
-//         prec:=MinPrecision;
-//         repeat
-//             go:=true;
-//             try
-//                 Zp:=pAdicRing(p,prec);
-//                 M:=SplittingField(h,Zp);
-//                 N:=LocalField(FieldOfFractions(Zp),DefiningPolynomial(M,Zp)); // we use LocalField because we need 
-//                                                                               // to construct subfields.
-//                 rtsN:=[ r[1] : r in Roots(h,N) ];
-//             catch e
-//                 go:=false;
-//                 prec +:=50;
-//                 vprintf ResRefCond : "precision increased to %o\n",prec;
-//                 vprint ResRefCond,2 : e;
-//             end try;
-//         until go;
-//         AVh`pAdicSplittingField:=<N,rtsN>;
-//     end if;
-//     return AVh`pAdicSplittingField[1],AVh`pAdicSplittingField[2];
-// end intrinsic;
-// 
-// intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari") -> Map
-// { 
-//     An embedding from RationalSplittingField to pAdicSplittingField.
-//     The vararg MinPrecision sets the minimal precision.
-//     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
-// }   
-//     if not assigned AVh`EmbeddingOfSplittingFields or MinPrecision gt Precision(Codomain(AVh`EmbeddingOfSplittingFields)) then
-//         vprint ResRefCond : "EmbeddingOfSplittingFields";
-//         M,rtsM:=RationalSplittingField(AVh : Method:=Method);
-//         h:=WeilPolynomial(AVh);
-//         prec:=MinPrecision;
-//         repeat
-//             go:=true;
-//             try
-//                 N:=pAdicSplittingField(AVh : MinPrecision:=2*prec);
-//                
-//                 rtsMinN:=[ r[1] : r in Roots(PolynomialRing(N)!DefiningPolynomial(M)) ];
-//                 is_root:=false;
-//                 // loop over all the roots, hoping to keep the precision down
-//                 for rr in rtsMinN do
-//                     eps:=hom<M->N | rr >; // a choice of eps:M->N. 
-//                                           // exists because both M and N are splitting fields 
-//                     is_root_M:=IsWeaklyZero(Evaluate(DefiningPolynomial(M),eps(M.1))); 
-//                                     // we test that the image of the primitive root 
-//                                     // of M is sent by eps to a root of def poly of M
-//                     is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
-//                                                                                     // similarly, we test that the roots of h in M 
-//                                                                                     // are sent to roots of h in N
-//                     if is_root_M and is_root_h then
-//                         break rr;
-//                     end if;
-//                 end for;
-//                 assert is_root_M;
-//                 assert is_root_h;
-//             catch e
-//                 go:=false;
-//                 prec+:=100;
-//                 vprintf ResRefCond,2 : "failed to verify the bijection between the roots of h:\nPrecision(N)=%o\n",Precision(N);
-//                 vprint ResRefCond,2 : Valuation(Evaluate(DefiningPolynomial(M),eps(M.1)));
-//                 vprint ResRefCond,2 : [ Valuation(Evaluate(h,eps(rM))) : rM in rtsM ];
-//                 vprintf ResRefCond : "precision increased to %o\n",prec;
-//                 vprint ResRefCond,2 : e;
-//             end try;
-//         until go;
-//         AVh`EmbeddingOfSplittingFields:=eps;
-//     end if;
-//     return AVh`EmbeddingOfSplittingFields;
-// end intrinsic;
 
 ///////////////////////////////    
 // ComplexRoots of a CMType  //
@@ -291,7 +200,9 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" 
         F:=FrobeniusEndomorphism(AVh)(1);
         deg:=Degree(Parent(F));
         M,rtsM,rtMCC:=RationalSplittingField(AVh : Method:=Method );
-        // the next line is not super precise.... It would be better to use Conjugate(x,1), but it seems to too slow in certain extreeme cases.
+        // the next line is not super precise.... 
+        // It would be better to use Conjugate(x,1), 
+        // but it seems to too slow in certain extreeme cases.
         map:=map<M->ComplexField() | x:->&+[Eltseq(x)[i]*rtMCC^(i-1) : i in [1..Degree(M)]]>;
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
@@ -348,7 +259,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                     assert assigned AVh`RationalSplittingField;
                     M,rtsM:=RationalSplittingField(AVh); // we do not use Domain(eps), since we need the roots as well.
                     N:=Codomain(eps); 
-                    p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),BaseRing(N))];
+                    p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),PrimeField(N))];
                     L:=UniverseAlgebra(AVh);
                     fac_q_L:=Factorization(q*MaximalOrder(L));
                     primes:=[ P[1] : P in fac_q_L ];
@@ -390,7 +301,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision
                     AVh`ShimuraTaniyamaPrecomputation:=< vals_F , vals_q, RHS_D_P , hp_fac >;
                 catch e
                     go:=false;
-                    prec +:=100;
+                    prec:=Precision(PrimeField(N))+100;
                     vprintf ResRefCond : "precision increased to %o\n",prec;
                     vprint ResRefCond,2 : e;
                 end try;
@@ -450,31 +361,35 @@ end intrinsic;
 
 intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari" ) -> BoolElt
 {   
-    Returns the reflex field associated to the CM-type as a subfield of pAdicSplittingField.
+    Returns the pAdic reflex field associated to the CM-type. 
+    It is created as a compositum of the fields generated by the single generators.
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
 }
     prec:=MinPrecision;
-    if not assigned PHI`pAdicReflexField or MinPrecision gt Precision(BaseRing(PHI`pAdicReflexField)) then
+    if not assigned PHI`pAdicReflexField or MinPrecision gt Precision(PrimeField(PHI`pAdicReflexField)) then
         vprint ResRefCond : "pAdicReflexField";
         repeat
             go:=true;
             try
                 h:=WeilPolynomial(AVh);
                 eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=prec , Method:=Method );
-                N:=Codomain(eps);
-                assert N cmpeq pAdicSplittingField(AVh);
                 rtsM_PHI:=ComplexRoots(AVh,PHI : Method:=Method ); 
                 h_fac:=[ hi[1] : hi in Factorization(h)];
                 gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
                 gens_E:=[ eps(g) : g in gens_E_inM ];
                 vprintf ResRefCond : "creating subfield ...";
-                E:=sub< N | gens_E >; // sometimes it seems to trigger Magma Internal Error in 2.25-6 and 2.25.8
-                                      // and it is not related to the precision
+                Qp:=PrimeField(Codomain(eps));
+                min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
+                min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
+                E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
+                for m in min_pols_gens_E[2..#min_pols_gens_E ] do
+                    E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
+                end for;
                 vprintf ResRefCond : "...done\n";
                 PHI`pAdicReflexField:=E;
             catch e
                 go:=false;
-                prec +:=100;
+                prec :=Precision(PrimeField(Codomain(eps)))+100;
                 vprintf ResRefCond : "precision increased to %o\n",prec;
                 vprint ResRefCond,2 : e;
             end try;
@@ -487,41 +402,73 @@ end intrinsic;
 // IsResidueReflexFieldEmbeddable  //
 /////////////////////////////////////
 
-intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari", MethodReflexField:="pAdic") -> BoolElt
+intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30, Method:="Pari", MethodReflexField:="pAdicEarlyExit") -> BoolElt
 {   
     Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
     The vararg Method can be either "Pari" or "Magma" and decides whether the compoutation of the splitting field and the roots is outsourced to Pari or not.
-    The vararg MethodReflexField can be either "pAdic" or "Rational" and decides whether the reflex field is computed as a subfield of the pAdicSplittingField or the RationalSplittingField.
+    The vararg MethodReflexField can be either "pAdic", "pAdicEarlyExit" or "Rational" and decides whether the reflex field is computed as a subfield of the pAdicSplittingField or the RationalSplittingField.
 }
-    require MethodReflexField in {"pAdic","Rational"} : "MethodReflexField should be either pAdic or Rational";
-    if not assigned PHI`IsResidueReflexFieldEmbeddable or MinPrecision gt Precision(PrimeField(AVh`pAdicSplittingField[2])) then
+    require MethodReflexField in {"pAdic","pAdicEarlyExit","Rational"} : "MethodReflexField should be either pAdic or Rational";
+//TODO FIX PRECISION
+    if not assigned PHI`IsResidueReflexFieldEmbeddable then
         vprintf ResRefCond : "IsResidueReflexFieldEmbeddable\n";
         q:=FiniteField(AVh);
         p:=CharacteristicFiniteField(AVh);
-        if MethodReflexField eq "pAdic" then
-            N:=pAdicSplittingField(AVh : MinPrecision:=MinPrecision);
+        if MethodReflexField eq "pAdicEarlyExit" then  
+            eps:=EmbeddingOfSplittingFields(AVh : MinPrecision:=MinPrecision , Method:=Method );
+            N:=Codomain(eps);
             // (early exit on N)
             // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
             // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
             // the reflex fields.
             // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
             // which is the bottleneck of function. In particular refl_fields will be left empty
-            if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
+            if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(Integers(N))) eq 0 then
                 PHI`IsResidueReflexFieldEmbeddable:=true;
                 vprint ResRefCond : "early exit on N";
             else
-                vprint ResRefCond : "no early exit on N";
+                h:=WeilPolynomial(AVh);
+                rtsM_PHI:=ComplexRoots(AVh,PHI : Method:=Method ); 
+                h_fac:=[ hi[1] : hi in Factorization(h)];
+                gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
+                gens_E:=[ eps(g) : g in gens_E_inM ];
+                vprintf ResRefCond : "creating subfield ...";
+                Qp:=PrimeField(Codomain(eps));
+                min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
+                min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
+                subs:=[ Integers(RamifiedRepresentation(LocalField(Qp,m))) : m in min_pols_gens_E ];
+                if exists{ S : S in subs | not (Ilog(p,q)) mod Ilog(p,#ResidueClassField(S)) eq 0 } then
+                    PHI`IsResidueReflexFieldEmbeddable:=false;
+                else
+                    E:=subs[1];
+                    for iS in subs[2..#subs] do
+                        E:=Composite(E,subs[iS]);
+                        kE:=ResidueClassField(E);
+                        if iS eq #subs then
+                            PHI`pAdicRefelxField:=E;
+                        end if;
+                        if not (Ilog(p,q)) mod Ilog(p,#kE) eq 0 then
+                            PHI`IsResidueReflexFieldEmbeddable:=false;
+                            break iS;
+                        end if;
+                    end for;
+                    if not assigned PHI`IsResidueReflexFieldEmbeddable then
+                        // if not assigned then it means that it has not exited earlier with false
+                        PHI`IsResidueReflexFieldEmbeddable:=true;
+                    end if;
+                end if;
+            end if;
+        elif MethodReflexField eq "pAdic" then
                 E:=pAdicReflexField(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method );
                 kE:=ResidueClassField(E);
-                PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,#kE) eq 0;
-            end if;
+                PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q) mod Ilog(p,#kE)) eq 0;
         elif MethodReflexField eq "Rational" then
             E:=RationalReflexField(AVh,PHI : Method:=Method);
             pp:=Decomposition(E,p : Al:="Montes");
             res:=[ #ResidueClassField(P[1]) : P in pp ];
             assert #Seqset(res) eq 1; // all primes should have the same res field
             kE:=res[1];
-            PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q)) mod Ilog(p,kE) eq 0;
+            PHI`IsResidueReflexFieldEmbeddable:=(Ilog(p,q) mod Ilog(p,kE)) eq 0;
         end if;
     end if;
     return PHI`IsResidueReflexFieldEmbeddable;
@@ -531,7 +478,7 @@ end intrinsic;
 // Chai-Conrad-Oort : Residual reflex condition //
 /////////////////////////////////////////////////    
 
-intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30 , Method:="Pari", MethodReflexField:="pAdic") -> BoolElt 
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecision:=30 , Method:="Pari", MethodReflexField:="pAdicEarlyExit") -> BoolElt 
 {   
     It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
@@ -551,7 +498,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinP
 end intrinsic;
 
 
-intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari" ) -> SeqEnum[AlgAssCMType]
+intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30 , Method:="Pari", MethodReflexField:="pAdicEarlyExit" ) -> SeqEnum[AlgAssCMType]
 {   
     It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
@@ -568,7 +515,7 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30 , Metho
     if not assigned AVh`RRC_CMTypes then
         rrc_cms:=[];
         for PHI in AllCMTypes(AVh) do
-            if ResidualReflexCondition(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method)  then
+        if ResidualReflexCondition(AVh,PHI : MinPrecision:=MinPrecision , Method:=Method , MethodReflexField:=MethodReflexField)  then
                 Append(~rrc_cms,PHI);
             end if;
         end for;
@@ -576,154 +523,6 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinPrecision:=30 , Metho
     end if;
     return AVh`RRC_CMTypes;
 end intrinsic;
-
-// // TO BE REMOVED, eventually. This intrinsic is superseeded by the above one ResidualReflexCondition, where we have a 
-//                               much better control of the Precision (avoiding several bugs). The timings are very similar.
-//                               The old version is kept for consultation.
-//
-// intrinsic CCO_OLD(AVh::IsogenyClassFq : MinPrecision:=30) -> SeqEnum[AlgAssCMType]
-// {   
-//     It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
-//     MinPrecision is the minimum precision to construct the p-adic splitting field (see below).
-// 
-//     Recall that a CMType PHI satisfies RRC if: 
-//         *) the CM-type satisfies the Shimura-Taniyama formula, and
-//         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
-//     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
-//     This allow us to do the tests in the p-adic splitting field, increasing speed.
-//     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.
-// }
-//     vprintf ResRefCond : "CCO_OLD\n";
-//         q:=FiniteField(AVh);
-//         all_cm:=AllCMTypes(AVh);
-//         bs:=[ CMPosElt(PHI) : PHI in all_cm ];
-//         prec:=MinPrecision;
-// 
-//         ////////////////----bijection between p-adic and CC roots via SplittingFields----///////////////////
-//         L:=Parent(bs[1]);
-//         h:=DefiningPolynomial(L);
-//         FL:=PrimitiveElement(L);
-//         _,p:=IsPrimePower(q);
-//         M,rtsM:=SplittingField(h);
-//         prec:=Max([prec] cat [Valuation(c,p) : c in Coefficients(h) | c ne 0]);        
-//         Zp:=pAdicRing(p,prec);
-//         hp:=ChangeRing(h,Zp);
-//         prec:=Max([prec,2*SuggestedPrecision(hp),2*SuggestedPrecision(ChangeRing(DefiningPolynomial(M),Zp))]);
-//         ChangePrecision(~Zp,prec);
-//         hp:=ChangeRing(h,Zp);
-//         repeat
-//             go:=true;
-//             try
-//                 np:=DefiningPolynomial(SplittingField(hp),Zp);
-//             catch e
-//                 prec +:= 50;
-//                 ChangePrecision(~Zp,prec);
-//                 hp:=ChangeRing(h,Zp);
-//                 go:=false;
-//                 vprintf ResRefCond : "precision increased to %o\n",prec;
-//             end try;
-//         until go;
-// 
-//         fac:=[ g[1] : g in Factorization(hp) ];
-//         N:=LocalField(FieldOfFractions(Zp),np);
-//         rootM_inN:=Roots(DefiningPolynomial(M),N)[1,1];          // sometimes the precision is not enough ?
-//         /* 
-//             // alternative to force higher precision. I don't like it.
-//             N0:=LocalField(FieldOfFractions(ChangePrecision(Zp,2*prec)),np); // this is defined to force a higher precision 
-//                                                                              // in the computation of eps below...
-//                                                                              // it is weird and I don't like it.
-//             rootM_inN:=N!Eltseq(Roots(DefiningPolynomial(M),N0)[1,1]);
-//             // this aproach seems to create problems later in the line
-//             // E:=sub< N | gens_E >; //sometimes it seems to crash...
-//             // for poly like:
-//             // x^6 - x^5 + 2*x^3 - 4*x + 8, x^6 - x^5 + 4*x^4 - 2*x^3 + 8*x^2 - 4*x + 8, x^6 + x^5 - 2*x^3 + 4*x + 8
-//             // hence we remove it
-//         */
-//         eps:=hom<M->N | rootM_inN >; // a choice of M->N. 
-//                                      // exists because both M and N are splitting fields 
-//                                      
-//         vprint ResRefCond : Evaluate(DefiningPolynomial(M),eps(M.1));
-//         assert IsWeaklyZero(Evaluate(DefiningPolynomial(M),eps(M.1)));
-//         all_resrefl:=[];
-//         all_st:=[];
-//         facq:=Factorization(q*MaximalOrder(L));
-//         primes:=[ P[1] : P in facq ];
-//         valsq:=[ P[2] : P in facq ];
-//         facFL:=Factorization(FL*MaximalOrder(L));
-//         valsFL:=[  ];
-//         hp_fac:=[ ];
-//         RHS_D_P:=[ ];
-//         for P in primes do
-//             vFLP:=[ fac[2] : fac in facFL | fac[1] eq P ];
-//             assert #vFLP in {0,1};
-//             vFLP:= (#vFLP eq 1) select vFLP[1] else 0;
-//             Append(~valsFL,vFLP);
-//             LP,mLP:=Completion(P : MinPrecision:=prec );
-//             Pfac:=[ gp : gp in fac | Valuation(Evaluate(gp,mLP(FL))) gt (prec div 2) ];
-//             assert #Pfac eq 1;
-//             Append(~hp_fac,Pfac[1]);
-//             RHS_D:=#[ r : r in rtsM | Valuation(Evaluate(Pfac[1],eps(r))) gt (prec div 2) ];
-//             assert RHS_D eq Degree(Pfac[1]);
-//             Append(~RHS_D_P,RHS_D);
-//         end for;
-//         pow_bas_L:=[FL^(i-1) : i in [1..Degree(h)]];
-//         refl_fields:=[];
-// 
-//         // (early exit on N)
-//         // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
-//         // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
-//         // the reflex fields.
-//         // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
-//         // which is the bottleneck of function. In particular refl_fields will be left empty
-//         if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(N)) eq 0 then
-//             compute_reflex_fields:=false;
-//             all_resrefl:=[ true : i in [1..#bs] ];
-//         else 
-//             compute_reflex_fields:=true;
-//         end if;
-//         vprint ResRefCond : "early exit on N",compute_reflex_fields;
-// 
-//         // now we loop over all cm-types
-//         for b in bs do
-//             assert2 b eq &+[(Coordinates([b],pow_bas_L)[1,i])*FL^(i-1) : i in [1..Degree(h)]];
-//             rtsM_PHI:=[];
-//             for FM in rtsM do
-//                 bM:=&+[(Coordinates([b],pow_bas_L)[1,i])*FM^(i-1) : i in [1..Degree(h)]]; // bM = 'image' of b in M 
-//                 assert2 bM eq -ComplexConjugate(bM);
-//                 if Im(Conjugates(bM)[1]) gt 0 then  // this is the choice phi_0:M->CC
-//                                                     // which induces a bijection Hom(L,C) <-> rtsM given by
-//                                                     // phi |-> the unique pi_j such that phi_0(pi_j)=phi(pi)
-//                     Append(~rtsM_PHI,FM);
-//                 end if;
-//                 // write b=sum b_k pi^(k-t)
-//                 // phi in PHI iff Im(phi(b))>0 iff Im(sum b_k phi(pi)^(k-1)) >0 iff Im(sum b_k phi_0(pi_j))>0 iff 
-//                 //            iff bM=sum b_k phi_0(pi_j) in rtsM_PHI. 
-//             end for;
-//             assert #rtsM_PHI eq Degree(h) div 2;
-//             ////////////////----residue field of reflex field, pAdic ----///////////////////
-//             if compute_reflex_fields then //check early exit on N: see above.
-//                 h_fac:=[ hi[1] : hi in Factorization(h)];
-//                 gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
-//                 gens_E:=[ eps(g) : g in gens_E_inM ];
-//                 E:=sub< N | gens_E >; //sometimes it seems to crash...
-//                 resrefl:=(Ilog(p,q)) mod Ilog(p,#ResidueClassField(E))  eq 0;
-//                 Append(~refl_fields,E);
-//                 Append(~all_resrefl,resrefl);
-//             end if;
-//             ////////////////----Shimura-Taniyama----///////////////////
-//             st_tests:=[];
-//             for iP in [1..#primes] do
-//                 RHS_N:=#[ r : r in rtsM_PHI | Valuation(Evaluate(hp_fac[iP],eps(r))) gt (prec div 2) ];
-//                 LHS:=valsFL[iP]/valsq[iP];
-//                 RHS:=RHS_N/RHS_D_P[iP];
-//                 Append(~st_tests, LHS eq RHS );
-//             end for;
-//             st:=&and(st_tests);
-//             Append(~all_st,st);
-//         end for;
-//         RRC_CMTypes:=[ all_cm[i] : i in [1..#all_cm] | all_resrefl[i] and all_st[i] ];
-//     return RRC_CMTypes;
-// end intrinsic;
 
 /*
 // TESTS
@@ -742,6 +541,9 @@ end intrinsic;
     for h in polys do
         AVh:=IsogenyClass(h);
         AVh;
+        time _:=RationalSplittingField(AVh : Method:="Pari");
+        time _:=pAdicSplittingField(AVh);
+        time _:=EmbeddingOfSplittingFields(AVh);
         time #ResidualReflexCondition(AVh);
     end for;
 
