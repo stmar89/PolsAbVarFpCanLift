@@ -48,13 +48,13 @@ declare attributes AlgAssCMType : ComplexRoots; // <rtsM,map> where
 // Splitting Fields  //
 ///////////////////////    
 
-intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari") -> FldNum,SeqEnum
+intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari", ComplexPrecision:=100) -> FldNum,SeqEnum
 { 
     Returns the splitting field over Q of the Weil polynomial of the isogeny class.
     The vararg can be either "Pari" or "Magma" and decides whether the compoutation is outsourced to Pari or not.
 }  
     require Method in {"Pari","Magma"} : "the method selected is not recognized" ;
-    if not assigned AVh`RationalSplittingField then
+    if not assigned AVh`RationalSplittingField  then
         vprintf ResRefCond : "RationalSplittingField\n";
         h:=WeilPolynomial(AVh);
         if Method eq "Pari" then
@@ -89,9 +89,24 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari") -> FldNum
         elif Method eq "Magma" then
             M,rtsM:=SplittingField(h);
         end if;
-        AVh`RationalSplittingField:=<M,rtsM>;
+        // compute the complex root
+        prec:=ComplexPrecision;
+        try 
+            rtMCC:=Roots(DefiningPolynomial(M),ComplexField(prec))[1,1];
+            assert Abs(Evaluate(DefiningPolynomial(M),rtMCC)) lt 10^-(prec div 2);
+        catch e
+            prec:=2*prec;
+            vprintf ResRefCond : "complex precision is not enough. increased to %o\n.",prec; 
+        end try;
+
+        AVh`RationalSplittingField:=<M,rtsM,rtMCC>;
     end if;
-    return AVh`RationalSplittingField[1],AVh`RationalSplittingField[2];
+    // do we need more precision?
+    if ComplexPrecision gt Precision(AVh`RationalSplittingField[3]) then
+        rtMCC:=Roots(DefiningPolynomial(AVh`RationalSplittingField[1]),ComplexField(ComplexPrecision))[1,1];
+        AVh`RationalSplittingField[3]:=rtMCC;
+    end if;
+    return Explode(AVh`RationalSplittingField);
 end intrinsic;
 
 intrinsic pAdicSplittingField(AVh::IsogenyClassFq : MinPrecision:=30 ) -> RngLocA,FldPad,Map
@@ -275,8 +290,9 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" 
         vprint ResRefCond : "ComplexRoots";
         F:=FrobeniusEndomorphism(AVh)(1);
         deg:=Degree(Parent(F));
-        M,rtsM:=RationalSplittingField(AVh : Method:=Method );
-        map:=hom<M->ComplexField() | x:->Conjugate(x,1) >;
+        M,rtsM,rtMCC:=RationalSplittingField(AVh : Method:=Method );
+        // the next line is not super precise.... It would be better to use Conjugate(x,1), but it seems to too slow in certain extreeme cases.
+        map:=map<M->ComplexField() | x:->&+[Eltseq(x)[i]*rtMCC^(i-1) : i in [1..Degree(M)]]>;
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
         assert b eq &+[(Coordinates([b],pow_bas_L)[1,i])*F^(i-1) : i in [1..deg]];
@@ -285,9 +301,18 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" 
         for FM in rtsM do
             bM:=&+[coord_b_pow_bas[i]*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
             assert2 bM eq -ComplexConjugate(bM); // a lot more expensive than expected
-            if Im(map(bM)) gt 0 then  // this is the choice phi_0:M->CC
-                                                // which induces a bijection Hom(L,C) <-> rtsM given by
-                                                // phi |-> the unique pi_j such that phi_0(pi_j)=phi(pi)
+            bMCC:=map(bM); 
+            try
+                assert Re(bMCC) lt 10^-(Precision(rtMCC div 2));
+            catch e
+                prec:=Precision(rtMCC)*2;
+                M,rtsM,rtMCC:=RationalSplittingField(AVh : Method:=Method , ComplexPrecision:=prec);
+                vprintf ResRefCond : "complex precision is not enough. increased to %o\n.",prec; 
+            end try;
+                
+            if Im(bMCC) gt 0 then   // the choice phi_0:M->CC is determiend by rtMCC
+                                    // which induces a bijection Hom(L,C) <-> rtsM given by
+                                    // phi |-> the unique pi_j such that phi_0(pi_j)=phi(pi)
                 Append(~rtsM_PHI,FM);
             end if;
             // write b=sum b_k pi^(k-t)
