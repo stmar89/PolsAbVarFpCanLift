@@ -79,10 +79,11 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari", ComplexPr
                 rtsM:=[ M ! (r cat [ 0 : i in [1..Degree(M)-#r] ]) : r in s[2]]; // the output of pari might have less coefficients 
                                                                                // if the one of highest degree are =0
                 assert #rtsM eq Degree(h);
-                assert2 forall{ r : r in rtsM | Evaluate(h,r) eq 0};
-                vprintf ResRefCond : "RationalSplittingField: ... Pari output is read by Magma";
+                assert forall{ r : r in rtsM | Evaluate(h,r) eq 0};
+                vprint ResRefCond : "RationalSplittingField: ... Pari output is read by Magma";
             catch e
-                vprint ResRefCond : "RationalSplittingField: Pari is not installed/set-up correctly (don't forget to increase parisizemax). We switch to Magma.\n"; 
+                vprint ResRefCond : "RationalSplittingField: Pari is not installed/set-up correctly, or you endoutered a bug of nfisincl. (don't forget to increase parisizemax)."; 
+                vprint ResRefCond : "RationalSplittingField: We switch to Magma"; 
                 vprint ResRefCond,2 : e;
                 M,rtsM:=SplittingField(h);
             end try;
@@ -91,21 +92,25 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari", ComplexPr
         end if;
         // compute the complex root
         prec:=ComplexPrecision;
-        try 
-            rtMCC:=Roots(DefiningPolynomial(M),ComplexField(prec))[1,1];
-            assert Abs(Evaluate(DefiningPolynomial(M),rtMCC)) lt 10^-(prec div 2);
-        catch e
-            prec:=2*prec;
-            vprintf ResRefCond : "RationalSplittingField: Complex precision is not enough. Increased to %o\n.",prec; 
-        end try;
-        vprintf ResRefCond : "RationalSplittingField: end";
+        repeat
+            go:=true;
+            try 
+                rtMCC:=Roots(DefiningPolynomial(M),ComplexField(prec))[1,1];
+                assert Abs(Evaluate(DefiningPolynomial(M),rtMCC)) lt 10^-(prec div 2);
+            catch e
+                go:=false;
+                prec:=2*prec;
+                vprintf ResRefCond : "RationalSplittingField: Complex precision increased to %o\n.",prec; 
+            end try;
+        until go;
+        vprint ResRefCond : "RationalSplittingField: end";
         AVh`RationalSplittingField:=<M,rtsM,rtMCC>;
     end if;
     // do we need more precision?
     if ComplexPrecision gt Precision(AVh`RationalSplittingField[3]) then
-        vprintf ResRefCond : "RationalSplittingField: Increasing the precision of the Complex Root ...";
+        vprint ResRefCond : "RationalSplittingField: Increasing the precision of the Complex Root ...";
         rtMCC:=Roots(DefiningPolynomial(AVh`RationalSplittingField[1]),ComplexField(ComplexPrecision))[1,1];
-        vprintf ResRefCond : "RationalSplittingField: ... done";
+        vprint ResRefCond : "RationalSplittingField: ... done";
         AVh`RationalSplittingField[3]:=rtMCC;
     end if;
     return Explode(AVh`RationalSplittingField);
@@ -164,14 +169,14 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
                 vprint ResRefCond : "EmbeddingOfSplittingFields : ... done";
                 assert test;
                 assert IsWeaklyZero(Evaluate(m,rr));
-                eps:=hom<M->N | [ rr]  >; // a choice of eps:M->N. 
+                eps:=map<M->N | x:->&+[Eltseq(x)[i]*rr^(i-1) : i in [1..Degree(M)]] >; // a choice of eps:M->N. 
                                                // exists because both M and N are splitting fields 
-                is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); //I am tired of IsWeaklyZero...
-                //is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(N)) ; 
+                //is_root_M:=IsWeaklyZero(Evaluate(m,eps(M.1))); //I am tired of IsWeaklyZero...
+                is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(PrimeField(N))) ; 
                                 // we test that the image of the primitive root 
                                 // of M is sent by eps to a root of def poly of M
-                is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
-                //is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(N))};
+                //is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
+                is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(PrimeField(N)))};
                                                                                 // similarly, we test that the roots of h in M 
                                                                                 // are sent to roots of h in N
                 assert is_root_M;
@@ -219,15 +224,19 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : Method:="Pari" 
             bM:=&+[coord_b_pow_bas[i]*FM^(i-1) : i in [1..deg]]; // bM = 'image' of b in M 
             assert2 bM eq -ComplexConjugate(bM); // a lot more expensive than expected
             bMCC:=map(bM); 
-            try
-                assert Re(bMCC) lt 10^-(Precision(rtMCC div 2));
-            catch e
-                prec:=Precision(rtMCC)*2;
-                vprintf ResRefCond : "ComplexRoots : Complex precision increased to %o\n.",prec; 
-                vprint ResRefCond : "ComplexRoots : Recomputing complex root of M ..."; 
-                M,rtsM,rtMCC:=RationalSplittingField(AVh : Method:=Method , ComplexPrecision:=prec);
-                vprint ResRefCond : "ComplexRoots : ... done"; 
-            end try;
+            repeat
+                go:=true;
+                try
+                    assert Re(bMCC) lt 10^-(Precision(rtMCC) div 2);
+                catch e
+                    go:=false;
+                    prec:=Precision(rtMCC)*2;
+                    vprintf ResRefCond : "ComplexRoots : Complex precision increased to %o\n",prec; 
+                    vprint ResRefCond : "ComplexRoots : Recomputing complex root of M ..."; 
+                    M,rtsM,rtMCC:=RationalSplittingField(AVh : Method:=Method , ComplexPrecision:=prec);
+                    vprint ResRefCond : "ComplexRoots : ... done"; 
+                end try;
+            until go;
                 
             if Im(bMCC) gt 0 then   // the choice phi_0:M->CC is determiend by rtMCC
                                     // which induces a bijection Hom(L,C) <-> rtsM given by
@@ -445,7 +454,7 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
                 h_fac:=[ hi[1] : hi in Factorization(h)];
                 gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
                 gens_E:=[ eps(g) : g in gens_E_inM ];
-                vprintf ResRefCond : "creating subfield ...";
+                vprintf ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield ...";
                 Qp:=PrimeField(Codomain(eps));
                 min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
                 min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
@@ -455,11 +464,11 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
                     PHI`IsResidueReflexFieldEmbeddable:=false;
                 else
                     E:=subs[1];
-                    for iS in subs[2..#subs] do
+                    for iS in [2..#subs] do
                         E:=Composite(E,subs[iS]);
                         kE:=ResidueClassField(E);
                         if iS eq #subs then
-                            PHI`pAdicRefelxField:=E;
+                            PHI`pAdicReflexField:=E;
                         end if;
                         if not (Ilog(p,q)) mod Ilog(p,#kE) eq 0 then
                             vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on intermediate composite";
@@ -547,12 +556,12 @@ end intrinsic;
     
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    SetVerbose("ResRefCond",1);
+    SetVerbose("ResRefCond",0);
     SetAssertions(1);
     PP<x>:=PolynomialRing(Integers());
     polys:=[
         (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25), //early exit on N. fast
-        x^6+3*x^4-10*x^3+15*x^2+125, // no early exit on N. takes ~20 minutes
+        x^6+3*x^4-10*x^3+15*x^2+125, // no early exit on N. takes ~20 minutes. very fast now: 7 secs
         x^8 - 7*x^7 + 25*x^6 - 63*x^5 + 123*x^4 - 189*x^3 + 225*x^2 - 189*x + 81, // errors fixed
         x^8 - 4*x^7 + 10*x^6 - 24*x^5 + 48*x^4 - 72*x^3 + 90*x^2 - 108*x + 81  // errors fixed
         ];
@@ -569,13 +578,12 @@ end intrinsic;
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     SetVerbose("ResRefCond",1);
     PP<x>:=PolynomialRing(Integers());
-    // problematic polys
-    // Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
-    // need to use MethodReflexField:="Rational"
+    // FIXED Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
     polys:=[
         x^6 - 2*x^5 + 4*x^3 - 8*x + 8, 
         x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
-        x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16,
+        //x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16, // problems with pAdicEarlyExit (error) and pAdic (infinite loop). 
+                                                         // ok with Rational
         x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81
     ];
     
@@ -591,8 +599,9 @@ end intrinsic;
         for i->PHI in cms do
             i;
             time ShimuraTaniyama(AVh,PHI);
-            // time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="pAdic"); //Magma Int Err
-            time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="Rational");
+             time IsResidueReflexFieldEmbeddable(AVh,PHI);
+            // time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="pAdic");
+            // time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="Rational");
         end for;
     end for;
 
@@ -600,8 +609,9 @@ end intrinsic;
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",2);
+    SetVerbose("ResRefCond",0);
     // triggering errors in ShimuraTaniyma. FIXED
+    // some of this poly trigger the pari bug in nfisincl
     polys:=[
         x^8 - x^6 + 12*x^4 - 9*x^2 + 81,
         x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81,
@@ -621,10 +631,13 @@ end intrinsic;
         x^8 + 2*x^7 + 3*x^6 + 9*x^5 + 18*x^4 + 27*x^3 + 27*x^2 + 54*x + 81
     ];
     for h in polys do
+        h;
         Ih:=IsogenyClass(h);
+        time M,rtsM:=RationalSplittingField(Ih);
+        assert forall{ r : r in rtsM | Evaluate(h,r) eq 0};
         all_cm:=AllCMTypes(Ih);
         for PHI in all_cm do
-            ShimuraTaniyama(Ih,PHI);
+            time ShimuraTaniyama(Ih,PHI);
         end for;
     end for;
 
