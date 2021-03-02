@@ -175,11 +175,11 @@ intrinsic EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinPrecision:=30 , Me
                 is_root_M:=Valuation(Evaluate(m,eps(M.1))) gt Round(0.95*Precision(PrimeField(N))) ; 
                                 // we test that the image of the primitive root 
                                 // of M is sent by eps to a root of def poly of M
+                assert is_root_M;
                 //is_root_h:=forall{ rM : rM in rtsM | IsWeaklyZero(Evaluate(h,eps(rM)))};
                 is_root_h:=forall{ rM : rM in rtsM | Valuation(Evaluate(h,eps(rM))) gt Round(0.95*Precision(PrimeField(N)))};
                                                                                 // similarly, we test that the roots of h in M 
                                                                                 // are sent to roots of h in N
-                assert is_root_M;
                 assert is_root_h;
             catch e
                 go:=false;
