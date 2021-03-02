@@ -366,7 +366,7 @@ intrinsic RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPreci
         M:=Parent(rtsM_PHI[1]); //M:=RationalSplittingField
         h_fac:=[ hi[1] : hi in Factorization(h)];
         gens_E_inM:=&cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
-        vprintf ResRefCond : "RationalReflexField : creating subfield ...";
+        vprint ResRefCond : "RationalReflexField : creating subfield ...";
         E:=sub< M | gens_E_inM >;
         vprint ResRefCond : "RationalReflexField : ...done";
         vprint ResRefCond : "RationalReflexField : end";
@@ -401,10 +401,14 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinPrecisio
                 Qp:=PrimeField(Codomain(eps));
                 min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
                 min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
-                E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
-                for m in min_pols_gens_E[2..#min_pols_gens_E ] do
-                    E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
-                end for;
+                if #min_pols_gens_E ne 0 then
+                    E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
+                    for m in min_pols_gens_E[2..#min_pols_gens_E ] do
+                        E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
+                    end for;
+                else
+                    E:=Qp;
+                end if;
                 vprint ResRefCond : "pAdicReflexField : ...done";
                 vprint ResRefCond : "pAdicReflexField : end";
                 PHI`pAdicReflexField:=E;
@@ -463,22 +467,27 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
                     vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on gens_E";
                     PHI`IsResidueReflexFieldEmbeddable:=false;
                 else
-                    E:=subs[1];
-                    for iS in [2..#subs] do
-                        E:=Composite(E,subs[iS]);
-                        kE:=ResidueClassField(E);
-                        if iS eq #subs then
-                            PHI`pAdicReflexField:=E;
-                        end if;
-                        if not (Ilog(p,q)) mod Ilog(p,#kE) eq 0 then
-                            vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on intermediate composite";
-                            PHI`IsResidueReflexFieldEmbeddable:=false;
-                            break iS;
-                        end if;
-                    end for;
-                    if not assigned PHI`IsResidueReflexFieldEmbeddable then
-                        // if not assigned then it means that it has not exited earlier with false
+                    if #subs eq 0 then
+                        E:=Qp;
                         PHI`IsResidueReflexFieldEmbeddable:=true;
+                    else
+                        E:=subs[1];
+                        for iS in [2..#subs] do
+                            E:=Composite(E,subs[iS]);
+                            kE:=ResidueClassField(E);
+                            if iS eq #subs then
+                                PHI`pAdicReflexField:=E;
+                            end if;
+                            if not (Ilog(p,q)) mod Ilog(p,#kE) eq 0 then
+                                vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on intermediate composite";
+                                PHI`IsResidueReflexFieldEmbeddable:=false;
+                                break iS;
+                            end if;
+                        end for;
+                        if not assigned PHI`IsResidueReflexFieldEmbeddable then
+                            // if not assigned then it means that it has not exited earlier with false
+                            PHI`IsResidueReflexFieldEmbeddable:=true;
+                        end if;
                     end if;
                 end if;
             end if;
