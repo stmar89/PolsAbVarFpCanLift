@@ -10,12 +10,12 @@
         Stefano Marseglia, stefano.marseglia89@gmail.com
 
     Here we include the code to reporduce the examples.
-    Last tested on Magma V2.25-6
+    Last tested on Magma V2.25-8
 
 */
 
 /////////////////////////////////
-// Example 5.9
+// Example 5.10
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -54,8 +54,12 @@
         end for;
     end for;
 
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
+
 /////////////////////////////////
-// Example 5.10
+// Example 5.11
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -99,7 +103,7 @@
     end for;
 
 /////////////////////////////////
-// Example 5.11
+// Example 5.12
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -127,7 +131,7 @@
             [ IsResidueReflexFieldEmbeddable(AVh,PHI) : PHI in AllCMTypes(AVh) ];
 
 /////////////////////////////////
-// Example 5.12
+// Example 5.13
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -165,6 +169,42 @@
     for T in oo do
         "\nindex of End =",Index(O,T);
         for A in ComputeIsomorphismClassesWithEndomorphismRing(If,T) do
+            "new isomorphism class";
+            printf "princ. pols. for each CM-type : ";
+            for PHI in all_cm do
+                _,pp:=IsPrincipallyPolarized(A,PHI);
+                printf "%o ",#pp;
+            end for;
+            printf "\n";
+        end for;
+    end for;
+
+/////////////////////////////////
+// Example 5.14
+/////////////////////////////////
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+   
+    _<x>:=PolynomialRing(Integers());
+    h:=x^8+16;
+    Ih:=IsogenyClass(h);
+    Ih;
+    q:=FiniteField(Ih);
+    pRank(Ih);
+    R:=ZFVOrder(Ih);
+    L:=Algebra(R);
+    O:=MaximalOrder(L);
+    oo:=FindOverOrders(R);
+    "there are 19 endomorphism rings, all with index in the maximal order a power of 2";
+    [ Index(O,S) : S in oo ];
+    all_cm:=AllCMTypes(Ih);
+    "all cm-types satisfy RRC:";
+    forall{ PHI : PHI in all_cm | ResidualReflexCondition(Ih,PHI)};
+
+    for T in oo do
+        "\nindex of End =",Index(O,T);
+        for A in ComputeIsomorphismClassesWithEndomorphismRing(Ih,T) do
             "new isomorphism class";
             printf "princ. pols. for each CM-type : ";
             for PHI in all_cm do
