@@ -100,7 +100,7 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : Method:="Pari", ComplexPr
             catch e
                 go:=false;
                 prec:=2*prec;
-                vprintf ResRefCond : "RationalSplittingField: Complex precision increased to %o\n.",prec; 
+                vprintf ResRefCond : "RationalSplittingField: Complex precision increased to %o\n",prec; 
             end try;
         until go;
         vprint ResRefCond : "RationalSplittingField: end";
