@@ -322,6 +322,8 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrec
                         assert #val_FatP in {0,1}; // P either dividies F or not
                         val_FatP:= (#val_FatP eq 1) select val_FatP[1] else 0;
                         Append(~vals_F,val_FatP);
+                        // the next few lines determine which p-adic factor of h corresponds to a prime P.
+                        // I would like to do it directly, without computing the completion.
                         LP,mLP:=Completion(P : MinPrecision:=prec );
                         //Pfac:=[ gp : gp in p_fac_h | IsWeaklyZero(Evaluate(gp,mLP(F))) ]; 
                         //      Completion seems to ignore my precision param so IsWeaklyZero doesn't seem to be working
