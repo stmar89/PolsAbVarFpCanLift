@@ -441,24 +441,33 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
                 gens_E:=[ eps(g) : g in gens_E_inM ];
                 vprint ResRefCond : "pAdicReflexField : computing generators : ... done";
                 vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
-                Qp:=PrimeField(Codomain(eps));
+                N:=Codomain(eps);
+                degN:=AbsoluteDegree(N);
+                Qp:=PrimeField(N);
                 min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
                 min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
                 if #min_pols_gens_E ne 0 then
-                    // E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
-                    // for m in min_pols_gens_E[2..#min_pols_gens_E ] do
-                    //     E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
-                    //     // problem in coercing the polys in Composite(R,S). RuntimeError... 
-                    // end for;
-                    // workarund
-                    // the assert is necessary since if one of the generators does not give rise to a normal extension then
-                    // SplittingField will return something bigger. Unfortunately the assert seems to trigger a MagmaInternalError
-                    assert forall{ m : m in min_pols_gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,m))) };
-                    E:=SplittingField( &*min_pols_gens_E );
+                    if exists{ m : m in min_pols_gens_E | Degree(m) eq degN } then
+                       vprint ResRefCond : "pAdicReflexField : creating subfield : E=N";
+                        E:=N;
+                    else
+                        // E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
+                        // for m in min_pols_gens_E[2..#min_pols_gens_E ] do
+                        //     E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
+                        //     // problem in coercing the polys in Composite(R,S). RuntimeError... 
+                        // end for;
+                        // workarund
+                        // the assert is necessary since if one of the generators does not give rise to a normal extension then
+                        // SplittingField will return something bigger. Unfortunately the assert seems to trigger a MagmaInternalError
+//TODO this is required because we use splitting field
+                        assert forall{ m : m in min_pols_gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,m))) };
+                        E:=SplittingField( &*min_pols_gens_E );
+                    end if;
                 else
+                   vprint ResRefCond : "pAdicReflexField : creating subfield : E=Qp";
                     E:=Qp;
                 end if;
-                vprint ResRefCond : "pAdicReflexField : creating subfield ...done";
+                vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
                 vprint ResRefCond : "pAdicReflexField : end";
                 PHI`pAdicReflexField:=E;
             catch e
@@ -512,40 +521,48 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
                 vtime ResRefCond : gens_E:=[ eps(g) : g in gens_E_inM ];
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : computing generators : ... done";
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : start...";
-                Qp:=PrimeField(Codomain(eps));
+                Qp:=PrimeField(N);
+                degN:=Degree(N);
                 min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
                 min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
-                subs:=[ Integers(RamifiedRepresentation(LocalField(Qp,m))) : m in min_pols_gens_E ];
-                assert forall{ S : S in subs | IsNormal(S) };
-                if exists{ S : S in subs | not (Ilog_p_q) mod Ilog(p,#ResidueClassField(S)) eq 0 } then
-                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on gens_E";
-                    PHI`IsResidueReflexFieldEmbeddable:=false;
+                if exists{m : m in min_pols_gens_E | Degree(m) eq degN} then
+                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on degree of min_pols_gens_E";
+                    E:=N;
+                    PHI`pAdicReflexField:=E;
                 else
-                    if #subs eq 0 then
-                        E:=Qp;
-                        PHI`IsResidueReflexFieldEmbeddable:=true;
+                    subs:=[ Integers(RamifiedRepresentation(LocalField(Qp,m))) : m in min_pols_gens_E ];
+                    if exists{ S : S in subs | not (Ilog_p_q) mod Ilog(p,#ResidueClassField(S)) eq 0 } then
+                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on gens_E";
+                        PHI`IsResidueReflexFieldEmbeddable:=false;
                     else
-                        E:=RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1]));
-                        assert IsNormal(E);
-                        for i in [2..#min_pols_gens_E] do
-                            min2:=min_pols_gens_E[i];
-                            assert IsNormal(RamifiedRepresentation(LocalField(Qp,min2)));
-                            E:=SplittingField(DefiningPolynomial(E,Qp)*min2);
-                            kE:=ResidueClassField(Integers(E));
-                            if i eq #min_pols_gens_E then
-                                PHI`pAdicReflexField:=E;
-                            end if;
-                            if not (Ilog_p_q) mod Ilog(p,#kE) eq 0 then
-                                vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on intermediate composite";
-                                PHI`IsResidueReflexFieldEmbeddable:=false;
-                                break i;
-                            end if;
-                        end for;
-                        if not assigned PHI`IsResidueReflexFieldEmbeddable then
-                            // if not assigned then it means that it has not exited earlier with false
+                        if #subs eq 0 then
+                            E:=Qp;
                             PHI`IsResidueReflexFieldEmbeddable:=true;
+                        else
+                            E:=RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1]));
+//TODO this is required because we use splitting field
+                            assert IsNormal(E);
+                            for i in [2..#min_pols_gens_E] do
+                                min2:=min_pols_gens_E[i];
+//TODO this is required because we use splitting field
+                                assert IsNormal(RamifiedRepresentation(LocalField(Qp,min2)));
+                                E:=SplittingField(DefiningPolynomial(E,Qp)*min2);
+                                kE:=ResidueClassField(Integers(E));
+                                if i eq #min_pols_gens_E then
+                                    PHI`pAdicReflexField:=E;
+                                end if;
+                                if not (Ilog_p_q) mod Ilog(p,#kE) eq 0 then
+                                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate composite";
+                                    PHI`IsResidueReflexFieldEmbeddable:=false;
+                                    break i;
+                                end if;
+                            end for;
                         end if;
                     end if;
+                end if;
+                if not assigned PHI`IsResidueReflexFieldEmbeddable then
+                    E:=PHI`pAdicReflexField; //this is assigned then
+                    PHI`IsResidueReflexFieldEmbeddable:=((Ilog_p_q) mod Ilog(p,#ResidueClassField(Integers(E))) eq 0);
                 end if;
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : ... done";
             end if;
@@ -695,7 +712,8 @@ end intrinsic;
     SetVerbose("ResRefCond",0);
     SetAssertions(1);
     PP<x>:=PolynomialRing(Integers());
-    h:=x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16; // problems with pAdicEarlyExit (error) and pAdic (MagmaInternalError). 
+    h:=x^8 + 2*x^7 + 2*x^6 - 4*x^4 + 8*x^2 + 16*x + 16; // DISAPPEARD by adding an early exit
+                                                        // problems with pAdicEarlyExit (error) and pAdic (MagmaInternalError). 
                                                         // ok with Rational
     h;
     AVh:=IsogenyClass(h);
@@ -707,9 +725,9 @@ end intrinsic;
         i;
         time ShimuraTaniyama(AVh,PHI);
         if assigned PHI`IsResidueReflexFieldEmbeddable then delete PHI`IsResidueReflexFieldEmbeddable; end if;
-        //time IsResidueReflexFieldEmbeddable(AVh,PHI);
+        time IsResidueReflexFieldEmbeddable(AVh,PHI);
         if assigned PHI`IsResidueReflexFieldEmbeddable then delete PHI`IsResidueReflexFieldEmbeddable; end if;
-        //time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="pAdic");
+        time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="pAdic");
         if assigned PHI`IsResidueReflexFieldEmbeddable then delete PHI`IsResidueReflexFieldEmbeddable; end if;
         time IsResidueReflexFieldEmbeddable(AVh,PHI : MethodReflexField:="Rational");
     end for;
