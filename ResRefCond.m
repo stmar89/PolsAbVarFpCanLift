@@ -548,47 +548,103 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : start...";
                 Qp:=PrimeField(N);
                 degN:=Degree(N);
-                min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
-                min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
-                if exists{m : m in min_pols_gens_E | Degree(m) eq degN} then
-                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on degree of min_pols_gens_E";
+                gens_E:=[ <g,MinimalPolynomial(g,Qp)> : g in gens_E ];
+                gens_E:=[ m : m in gens_E | Degree(m[2]) gt 1];
+                if #gens_E eq 0 then
+                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : E=Qp";
+                    E:=Qp;
+                    PHI`pAdicReflexField:=E;
+                    PHI`IsResidueReflexFieldEmbeddable:=true;
+                elif exists{m : m in gens_E | Degree(m[2]) eq degN} then
+                vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : E=N";
                     E:=N;
                     PHI`pAdicReflexField:=E;
+                    PHI`IsResidueReflexFieldEmbeddable:=(AbsoluteInertiaDegree(N) mod Ilog_p_q) eq 0;
                 else
-                    subs:=[ Integers(RamifiedRepresentation(LocalField(Qp,m))) : m in min_pols_gens_E ];
-                    if exists{ S : S in subs | not (Ilog_p_q) mod Ilog(p,#ResidueClassField(S)) eq 0 } then
-                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on gens_E";
+                    fld_gens_E:=[ LocalField(Qp,m[2]) : m in gens_E ];
+                    if exists{ S : S in fld_gens_E | (InertiaDegree(S) mod Ilog_p_q) eq 0 } then
+                        vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : false on gens_E";
                         PHI`IsResidueReflexFieldEmbeddable:=false;
                     else
-                        if #subs eq 0 then
-                            E:=Qp;
-                            PHI`IsResidueReflexFieldEmbeddable:=true;
-                        else
-                            E:=RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1]));
-//TODO this is required because we use splitting field
-                            assert IsNormal(E);
-                            for i in [2..#min_pols_gens_E] do
-                                min2:=min_pols_gens_E[i];
-//TODO this is required because we use splitting field
-                                assert IsNormal(RamifiedRepresentation(LocalField(Qp,min2)));
-                                E:=SplittingField(DefiningPolynomial(E,Qp)*min2);
-                                kE:=ResidueClassField(Integers(E));
-                                if i eq #min_pols_gens_E then
-                                    PHI`pAdicReflexField:=E;
-                                end if;
-                                if not (Ilog_p_q) mod Ilog(p,#kE) eq 0 then
-                                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate composite";
-                                    PHI`IsResidueReflexFieldEmbeddable:=false;
-                                    break i;
-                                end if;
-                            end for;
+//TODO explain why we do normal and not_normal. without this distinction the code would be simpler
+                        normal:=[];
+                        not_normal:=[];
+                        for i->fld in fld_gens_E do
+                            S:=RamifiedRepresentation(fld);
+                            if IsNormal(S) then
+                                Append(~normal,gens_E[i]);
+                            else
+                                Append(~not_normal,gens_E[i]);
+                            end if;
+                        end for;
+                        gens_added:=[];
+                        // normal gens
+                        if #normal gt 0 then
+                            pol:=normal[1,2];
+                            E0:=SplittingField(pol); 
+                            if not (AbsoluteInertiaDegree(E0) mod Ilog_p_q) eq 0 then
+                                PHI`IsResidueReflexFieldEmbeddable:=false;
+                            else
+                                for ig->g in normal[2..#normal] do
+                                    pol *:=g[2];
+                                    E0:=SplittingField(pol); 
+                                    Append(~gens_added,g);
+                                    is_emb:= (AbsoluteInertiaDegree(E0) mod Ilog_p_q) ;
+                                    if not is_emb eq 0 or AbsoluteDegree(E0) eq degN then
+                                        PHI`IsResidueReflexFieldEmbeddable:=false;
+                                        vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate normal field";
+                                        break ig;
+                                    end if;
+                                end for;
+                            end if;
                         end if;
+                        if (not assigned PHI`IsResidueReflexFieldEmbeddable) and #not_normal gt 0 then
+                            // not_normal gens
+                            N0,NtoN0:=LocalFieldOverPrimeField(N);
+                            E1,E1toN0:=sub<N0 | [ not_normal[1,2] ]>;
+                            Append(~gens_added,not_normal[1]);
+                            if not (InertiaDegree(E1) mod Ilog_p_q) eq 0 then 
+                                PHI`IsResidueReflexFieldEmbeddable:=false;
+                            else
+                                first_gen:=E1toN0(E1.1);
+                                for ig->second_gen in not_normal[2..#not_normal] do
+                                    E1,E1toN0:=sub<N0 | [ first_gen,second_gen[2] ]>;
+                                    Append(~gens_added,second_gen);
+                                    is_emb:= (InertiaDegree(E1) mod Ilog_p_q) ;
+                                    if not is_emb or Degree(E1) eq degN then 
+                                        PHI`IsResidueReflexFieldEmbeddable:=false;
+                                        vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate not normal sub field";
+                                        break ig;
+                                    else
+                                        first_gen:=E1toN0(E1.1);
+                                    end if;
+                                end for;
+                            end if;
+                        end if;
+                        if not assigned PHI`IsResidueReflexFieldEmbeddable then
+                            assert #gens_added eq #gens_E; // no early exit has occurred.
+                            // put together normal and not_normal
+                            if #not_normal eq 0 then
+                                //only normal part
+                                E:=E0;
+                            elif #normal eq 0 then
+                                // only not normal part
+                                E:=RamifiedRepresentation(E1);
+                            else
+                                //both
+                                test,first_gen:=HasRoot(DefiningPolynomial(E0,Qp));
+                                assert test;
+                                second_gen:=E1toN0(E1.1);
+                                E:=RamifiedRepresentation(sub<N0| [ first_gen,second_gen ]>);
+                            end if;
+                            E:=PHI`pAdicReflexField; //this is assigned then
+                            PHI`IsResidueReflexFieldEmbeddable:=(InertiaDegree(E) mod Ilog_p_q) eq 0;
+                        end if;
+                        // #gens_added eq #gens_E then we could also assign PHI`pAdiReflexField, but we will have to gen another sub
+                        // potentially causing more troubles.
                     end if;
                 end if;
-                if not assigned PHI`IsResidueReflexFieldEmbeddable then
-                    E:=PHI`pAdicReflexField; //this is assigned then
-                    PHI`IsResidueReflexFieldEmbeddable:=((Ilog_p_q) mod Ilog(p,#ResidueClassField(Integers(E))) eq 0);
-                end if;
+                assert assigned PHI`IsResidueReflexFieldEmbeddable;
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : ... done";
             end if;
         elif MethodReflexField eq "pAdic" then
@@ -742,11 +798,11 @@ end intrinsic;
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     SetVerbose("ResRefCond",2);
     PP<x>:=PolynomialRing(Integers());
-    // FIXED now, with all methods. Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
+    // Magma Internal Error in V2.25-6, also in 2.25-8, with pAdic
     polys:=[
-        x^6 - 2*x^5 + 4*x^3 - 8*x + 8, // this uses the linear alg red in the pAdic
+        //x^6 - 2*x^5 + 4*x^3 - 8*x + 8, // Err
         x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
-        x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81
+        x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81 //Magma Int Err
     ];
     for h in polys do
         h;
