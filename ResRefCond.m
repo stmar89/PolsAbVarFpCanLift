@@ -436,9 +436,21 @@ intrinsic LocalFieldOverPrimeField(N::FldPad) -> RngLocA,Map
     NtoN0:=map<N->N0 | c:->&+[Flat(c)[i]*coord[i] : i in [1..degN]]>;
     N0toN:=hom<N0->N | [N.1]>;
     map:=map<N->N0 | x:->NtoN0(x) , y:->N0toN(y)>;
+    // TEST 
+    //  for i in [1..1000] do 
+    //      c:=Random(Integers(N)); d:=c@map@@map-c; if not IsWeaklyZero(d) then Valuation(d),Precision(N); end if; 
+    //  end for; 
     return N0,map;
 end intrinsic;
 
+my_Eltseq:=function(x)
+// N0 of type RngLocA. Eltseq(N0!1) has lenght 1, instead of Degree(N). This function fixes the problem.
+    N:=Parent(x);
+    deg:=Degree(N);
+    seq:=Eltseq(x);
+    seq cat:=[N!0 : i in [1..deg-#seq]];
+    return seq;
+end function;
 
 intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30, MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> FldPad
 {   
@@ -455,7 +467,8 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
             try
                 h:=WeilPolynomial(AVh);
                 h_fac:=[ hi[1] : hi in Factorization(h)];
-                eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , MethodRationalSplittingField:=MethodRationalSplittingField );
+                eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , 
+                        MethodRationalSplittingField:=MethodRationalSplittingField );
                 N:=Codomain(eps);
                 degN:=AbsoluteDegree(N);
                 Qp:=PrimeField(N);
@@ -477,26 +490,14 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
                     E:=N;
                 else
                     N0,NtoN0:=LocalFieldOverPrimeField(N);
-                    gens_E:=[ NtoN0(g) : g in gens_E ] cat [N0!1];
-                    vprint ResRefCond : "pAdicReflexField : lin alg red : start ...";
-                    gens_E:=EchelonForm(Matrix( [Eltseq(g) : g in gens_E] ));
-                    gens_E:=[ N0 ! Eltseq(r) : r in Rows(gens_E) ];
-                    gens_E:=[ <g,MinimalPolynomial(g,Qp)> : g in gens_E ];
-                    gens_E:=[ m : m in gens_E | Degree(m[2]) gt 1]; //removes 1 and eventual 0's
-                    assert forall{ g : g in gens_E | Degree(g[2]) le degN };
-                    assert #gens_E le degN-1; //the -1 is because we removed 1.
-                    vprint ResRefCond : "pAdicReflexField : lin alg red : ... done";
-                    if #gens_E eq degN-1 or exists{ m : m in gens_E | Degree(m[2]) eq degN} then 
-                        E:=N; 
-                    else
-                        vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
-                        //if forall{ g : g in gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,g[2])))} then
-                        // normal case: this might take more time to test, but we want to avoid using sub as much as possible
-                        // in order to escape Magma Internal Error
-                        //      E:=SplittingField( &*[ g[2] : g in gens_E ]);
-                        E:=RamifiedRepresentation(sub<N0|[g[1] : g in gens_E]>);
-                        vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
-                    end if;
+                    gens_E:=[ NtoN0(g[1]) : g in gens_E ];
+                    vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
+                    //if forall{ g : g in gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,g[2])))} then
+                    // normal case: this might take more time to test, but we want to avoid using sub as much as possible
+                    // in order to escape Magma Internal Error
+                    //      E:=SplittingField( &*[ g[2] : g in gens_E ]);
+                    E:=RamifiedRepresentation(sub<N0|[g : g in gens_E]>);
+                    vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
                 end if;
                 vprint ResRefCond : "pAdicReflexField : end";
                 PHI`pAdicReflexField:=E;
@@ -528,12 +529,6 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType
             vprint ResRefCond : "IsResidueReflexFieldEmbeddable : MethodReflexField pAdicEarlyExit";
             eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=MinpAdicPrecision , MethodRationalSplittingField:=MethodRationalSplittingField , MinComplexPrecision:=MinComplexPrecision );
             N:=Codomain(eps);
-            // (early exit on N)
-            // Denote the residue field of N by kN. The residue field of any subfield of N is a subfield of kN.
-            // Hence, if kN is a subfield of Fq=FiniteField(AVh) then the same is true for the residue fields of
-            // the reflex fields.
-            // If this happens, we set the marker compute_reflex_fields:=false and skip the computation of the reflex fields 
-            // which is the bottleneck of function. In particular refl_fields will be left empty
             if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(Integers(N))) eq 0 then
                 PHI`IsResidueReflexFieldEmbeddable:=true;
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on N";
@@ -745,11 +740,11 @@ end intrinsic;
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    SetVerbose("ResRefCond",0);
+    SetVerbose("ResRefCond",2);
     PP<x>:=PolynomialRing(Integers());
     // FIXED now, with all methods. Magma Internal Error in V2.25-6, also in 2.25-8, while creating subfield of N
     polys:=[
-        x^6 - 2*x^5 + 4*x^3 - 8*x + 8, 
+        x^6 - 2*x^5 + 4*x^3 - 8*x + 8, // this uses the linear alg red in the pAdic
         x^8 + 2*x^6 + 4*x^4 + 8*x^2 + 16,
         x^8 + 3*x^6 + 9*x^4 + 27*x^2 + 81
     ];
