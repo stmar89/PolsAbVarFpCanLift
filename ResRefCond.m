@@ -415,22 +415,30 @@ intrinsic RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MethodRa
     return PHI`RationalReflexField;
 end intrinsic;
 
-// loc_compositum:=function(l,n)
-//     vprint ResRefCond : "loc_compositum : start";
-//     assert Parent(n) eq Parent(l);
-//     Qp:=BaseRing(Parent(l));
-//     LL:=LocalField(Qp,l);
-//     L,map:=RamifiedRepresentation(LL);
-//     has_rr,rr:=HasRoot(n,L);
-//     if has_rr then
-//         nLL:=MinimalPolynomial(rr@@map);
-//     else //n is irred over L
-//         nLL:=n; //no coercion needed
-//     end if;
-//     C:=LocalField(LL,n);
-//     vprint ResRefCond : "loc_compositum : start";
-//     return DefiningPolynomial(C,Qp),C;
-// end function;
+coordinates:=function(S, basis)
+    basis_matrix := Matrix([ Flat(bb) : bb in basis]);
+    elts_matrix := Matrix([ Flat(x) : x in S]);
+    coords_matrix := Solution( basis_matrix, elts_matrix);
+    coords := [ Eltseq(coords_matrix[i]) : i in [1..Nrows(coords_matrix)] ];
+    return coords;
+end function;
+
+
+intrinsic LocalFieldOverPrimeField(N::FldPad) -> RngLocA,Map
+{  Given a local field N of type FldPad returns the isomorphic RngLocA over the PrimeField together with an isomorphism. }
+    Qp:=PrimeField(N);
+    degN:=AbsoluteDegree(N);
+    N0:=LocalField(Qp,DefiningPolynomial(N,Qp));
+    powN:=[ i gt 1 select Self(i-1)*N.1 else N!1 : i in [1..degN] ];
+    powN:=[ Flat(b) : b in powN ];
+    basN:=[ b*g : b in Basis(BaseRing(N)) , g in Basis(N) ];
+    coord:=[ N0! c : c in coordinates(basN,powN)];
+    NtoN0:=map<N->N0 | c:->&+[Flat(c)[i]*coord[i] : i in [1..degN]]>;
+    N0toN:=hom<N0->N | [N.1]>;
+    map:=map<N->N0 | x:->NtoN0(x) , y:->N0toN(y)>;
+    return N0,map;
+end intrinsic;
+
 
 intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30, MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> FldPad
 {   
@@ -468,53 +476,25 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
                 elif exists{ m : m in gens_E | Degree(m[2]) eq degN } then
                     E:=N;
                 else
+                    N0,NtoN0:=LocalFieldOverPrimeField(N);
+                    gens_E:=[ NtoN0(g) : g in gens_E ] cat [N0!1];
                     vprint ResRefCond : "pAdicReflexField : lin alg red : start ...";
-N;
-"flat";
-Flat(N.1);
-//gens_E0:=[ g[1] : g in gens_E];
-//gens_E0;
-//[ Flat(g) : g in gens_E0 ];
-
-                    gens_E:=Matrix(#gens_E,degN,[ Flat(g[1]) : g in gens_E ]);
-//gens_E;
-                    N0:=LocalField(Qp,DefiningPolynomial(N,Qp));
-(N0!Flat(N.1)) , N0.1;
-//TODO Flat does not do wht I expect ... I do I send an element of N into N0 ????
-
-//N0toN:=hom<N0->N | [N.1] >;
-//gens_E1:=[N0toN(N0!Eltseq(g)) : g in Rows(gens_E)];
-//"vals";
-//[ Valuation(gens_E1[i]-gens_E0[i]) : i in [1..#gens_E0]];
-                    gens_E:=EchelonForm(gens_E);
-//gens_E;
+                    gens_E:=EchelonForm(Matrix( [Eltseq(g) : g in gens_E] ));
                     gens_E:=[ N0 ! Eltseq(r) : r in Rows(gens_E) ];
-                    gens_E:=[ g : g in gens_E | not IsWeaklyZero(g) ];
-//gens_E;
-                    assert #gens_E le degN;
+                    gens_E:=[ <g,MinimalPolynomial(g,Qp)> : g in gens_E ];
+                    gens_E:=[ m : m in gens_E | Degree(m[2]) gt 1]; //removes 1 and eventual 0's
+                    assert forall{ g : g in gens_E | Degree(g[2]) le degN };
+                    assert #gens_E le degN-1; //the -1 is because we removed 1.
                     vprint ResRefCond : "pAdicReflexField : lin alg red : ... done";
-                    if #gens_E eq degN then
+                    if #gens_E eq degN-1 or exists{ m : m in gens_E | Degree(m[2]) eq degN} then 
                         E:=N; 
                     else
                         vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
-print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-gens_E;
-                        gens_E:= [ < g , MinimalPolynomial(g) > : g in gens_E ];
-print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-                        assert forall{ g : g in gens_E | Degree(g[2]) le degN };
-print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-                        if exists{ g : g in gens_E | Degree(g[2]) eq degN } then
-                        // I don't think this can happen at this point, but it is a very cheap check.
-print "????????????";
-                            E:=N;
-//                        elif forall{ g : g in gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,g[2])))} then
+                        //if forall{ g : g in gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,g[2])))} then
                         // normal case: this might take more time to test, but we want to avoid using sub as much as possible
                         // in order to escape Magma Internal Error
-//                            E:=SplittingField( &*[ g[2] : g in gens_E ]);
-                        else
-print ".............";
-                            E:=RamifiedRepresentation(sub<N0|[g[1] : g in gens_E]>);
-                        end if;
+                        //      E:=SplittingField( &*[ g[2] : g in gens_E ]);
+                        E:=RamifiedRepresentation(sub<N0|[g[1] : g in gens_E]>);
                         vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
                     end if;
                 end if;
@@ -725,6 +705,43 @@ end intrinsic;
         end for;
         "tot time",Cputime(t0); 
     end for;
+
+    AttachSpec("~/packages_github/AbVarFq/packages.spec");
+    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    SetVerbose("ResRefCond",2);
+    PP<x>:=PolynomialRing(Integers());
+    polys:=[
+    // all these have the first CM-type giving rise to a non-normal rational reflex feild
+    // none of these seem to cause MagmaInternalError
+    x^8 - 4*x^7 + 9*x^6 - 16*x^5 + 24*x^4 - 32*x^3 + 36*x^2 - 32*x + 16,
+    x^8 - 2*x^7 + x^6 + 4*x^2 - 16*x + 16,
+    x^8 - 2*x^7 + x^6 + 4*x^5 - 8*x^4 + 8*x^3 + 4*x^2 - 16*x + 16,
+    x^8 - 2*x^7 + 3*x^6 - 4*x^5 + 4*x^4 - 8*x^3 + 12*x^2 - 16*x + 16,
+    //x^8 - x^7 + 2*x^6 - 2*x^5 + 2*x^4 - 4*x^3 + 8*x^2 - 8*x + 16,// problems with pAdic. It looks like a Magma bug
+                                                                   // MinimalPolynomial(N.1) and MinimalPolynomial(N.1,Qp) 
+                                                                   // have the same degree !!!
+    //x^8 - x^7 + 2*x^6 + 2*x^5 - 2*x^4 + 4*x^3 + 8*x^2 - 8*x + 16,// problems with pAdic. same as above
+    x^8 - x^6 + 4*x^4 - 4*x^2 + 16,
+    x^8 + x^6 - 4*x^5 - 8*x^3 + 4*x^2 + 16,
+    x^8 + x^6 + 4*x^2 + 16,
+    x^8 + x^6 + 4*x^5 + 8*x^3 + 4*x^2 + 16
+    ];
+    for h in polys do
+        h;
+        Ih:=IsogenyClass(h);
+        PHI:=AllCMTypes(Ih)[1];
+        time Er:=RationalReflexField(Ih,PHI);
+        "IsNormal Er:",IsNormal(Er);
+        if assigned PHI`IsResidueReflexFieldEmbeddable then delete PHI`IsResidueReflexFieldEmbeddable; end if;
+        "IsResidueReflexFieldEmbeddable with MethodReflexField Rational";
+        time IsResidueReflexFieldEmbeddable(Ih,PHI : MethodReflexField:="Rational");
+        time Ep:=pAdicReflexField(Ih,PHI);
+        "IsNormal Ep:",IsNormal(Ep);
+        if assigned PHI`IsResidueReflexFieldEmbeddable then delete PHI`IsResidueReflexFieldEmbeddable; end if;
+        "IsResidueReflexFieldEmbeddable with MethodReflexField pAdic";
+        time IsResidueReflexFieldEmbeddable(Ih,PHI : MethodReflexField:="pAdic");
+    end for;
+
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
