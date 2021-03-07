@@ -404,7 +404,7 @@ intrinsic RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MethodRa
         rtsM_PHI_pow:=[ pow : pow in rstM_pow | pow in rtsM_PHI ];
         gens_E_inM:=&cat[ [ &+[ r[j] : r in [ r[1] : r in rtsM_PHI_pow | r[2] eq hi ] ] : j in [1..Degree(hi)] ] : hi in h_fac ];
         //compare with the old method : sanity check
-        assert2 gens_E_inM eq &cat[[ &+[ (r)^i : r in rtsM_PHI | Evaluate(hi,r) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
+        assert2 gens_E_inM eq &cat[[ &+[ (r[1,2])^i : r in rtsM_PHI | Evaluate(hi,r[1,2]) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
         vprint ResRefCond : "RationalReflexField : computing generators : ... done";
         vprint ResRefCond : "RationalReflexField : creating subfield : start ...";
         E:=sub< M | gens_E_inM >;
@@ -414,6 +414,23 @@ intrinsic RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MethodRa
     end if;
     return PHI`RationalReflexField;
 end intrinsic;
+
+// loc_compositum:=function(l,n)
+//     vprint ResRefCond : "loc_compositum : start";
+//     assert Parent(n) eq Parent(l);
+//     Qp:=BaseRing(Parent(l));
+//     LL:=LocalField(Qp,l);
+//     L,map:=RamifiedRepresentation(LL);
+//     has_rr,rr:=HasRoot(n,L);
+//     if has_rr then
+//         nLL:=MinimalPolynomial(rr@@map);
+//     else //n is irred over L
+//         nLL:=n; //no coercion needed
+//     end if;
+//     C:=LocalField(LL,n);
+//     vprint ResRefCond : "loc_compositum : start";
+//     return DefiningPolynomial(C,Qp),C;
+// end function;
 
 intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30, MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> FldPad
 {   
@@ -429,9 +446,12 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
             go:=true;
             try
                 h:=WeilPolynomial(AVh);
-                eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , MethodRationalSplittingField:=MethodRationalSplittingField );
-                rtsM_PHI:=ComplexRoots(AVh,PHI : MinComplexPrecision:=MinComplexPrecision); 
                 h_fac:=[ hi[1] : hi in Factorization(h)];
+                eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , MethodRationalSplittingField:=MethodRationalSplittingField );
+                N:=Codomain(eps);
+                degN:=AbsoluteDegree(N);
+                Qp:=PrimeField(N);
+                rtsM_PHI:=ComplexRoots(AVh,PHI : MinComplexPrecision:=MinComplexPrecision); 
                 rtsM_pow:=PowersOfRationalRoots(AVh); // already computed in ComplexRoots
                 vprint ResRefCond : "pAdicReflexField : computing generators : start ...";
                 rtsM_PHI_pow:=[ pow : pow in rtsM_pow | pow in rtsM_PHI ];
@@ -440,34 +460,64 @@ intrinsic pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPre
                 assert2 gens_E_inM eq &cat[[ &+[ (r[1,2])^i : r in rtsM_PHI | Evaluate(hi,r[1,2]) eq 0 ] : i in [0..Degree(hi)-1] ] : hi in h_fac];
                 gens_E:=[ eps(g) : g in gens_E_inM ];
                 vprint ResRefCond : "pAdicReflexField : computing generators : ... done";
-                vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
-                N:=Codomain(eps);
-                degN:=AbsoluteDegree(N);
-                Qp:=PrimeField(N);
-                min_pols_gens_E:=[ MinimalPolynomial(g,Qp) : g in gens_E ];
-                min_pols_gens_E:=[ m : m in min_pols_gens_E | Degree(m) gt 1];
-                if #min_pols_gens_E ne 0 then
-                    if exists{ m : m in min_pols_gens_E | Degree(m) eq degN } then
-                       vprint ResRefCond : "pAdicReflexField : creating subfield : E=N";
-                        E:=N;
-                    else
-                        // E:=Integers(RamifiedRepresentation(LocalField(Qp,min_pols_gens_E[1])));
-                        // for m in min_pols_gens_E[2..#min_pols_gens_E ] do
-                        //     E:=Composite(E,Integers(RamifiedRepresentation(LocalField(Qp,m))));
-                        //     // problem in coercing the polys in Composite(R,S). RuntimeError... 
-                        // end for;
-                        // workarund
-                        // the assert is necessary since if one of the generators does not give rise to a normal extension then
-                        // SplittingField will return something bigger. Unfortunately the assert seems to trigger a MagmaInternalError
-//TODO this is required because we use splitting field
-                        assert forall{ m : m in min_pols_gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,m))) };
-                        E:=SplittingField( &*min_pols_gens_E );
-                    end if;
-                else
-                   vprint ResRefCond : "pAdicReflexField : creating subfield : E=Qp";
+                gens_E:=[ <g,MinimalPolynomial(g,Qp)> : g in gens_E ];
+                gens_E:=[ m : m in gens_E | Degree(m[2]) gt 1];
+                assert forall{ m : m in gens_E | Degree(m[2]) le degN};
+                if #gens_E eq 0 then
                     E:=Qp;
+                elif exists{ m : m in gens_E | Degree(m[2]) eq degN } then
+                    E:=N;
+                else
+                    vprint ResRefCond : "pAdicReflexField : lin alg red : start ...";
+N;
+"flat";
+Flat(N.1);
+//gens_E0:=[ g[1] : g in gens_E];
+//gens_E0;
+//[ Flat(g) : g in gens_E0 ];
+
+                    gens_E:=Matrix(#gens_E,degN,[ Flat(g[1]) : g in gens_E ]);
+//gens_E;
+                    N0:=LocalField(Qp,DefiningPolynomial(N,Qp));
+(N0!Flat(N.1)) , N0.1;
+//TODO Flat does not do wht I expect ... I do I send an element of N into N0 ????
+
+//N0toN:=hom<N0->N | [N.1] >;
+//gens_E1:=[N0toN(N0!Eltseq(g)) : g in Rows(gens_E)];
+//"vals";
+//[ Valuation(gens_E1[i]-gens_E0[i]) : i in [1..#gens_E0]];
+                    gens_E:=EchelonForm(gens_E);
+//gens_E;
+                    gens_E:=[ N0 ! Eltseq(r) : r in Rows(gens_E) ];
+                    gens_E:=[ g : g in gens_E | not IsWeaklyZero(g) ];
+//gens_E;
+                    assert #gens_E le degN;
+                    vprint ResRefCond : "pAdicReflexField : lin alg red : ... done";
+                    if #gens_E eq degN then
+                        E:=N; 
+                    else
+                        vprint ResRefCond : "pAdicReflexField : creating subfield : start ...";
+print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+gens_E;
+                        gens_E:= [ < g , MinimalPolynomial(g) > : g in gens_E ];
+print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+                        assert forall{ g : g in gens_E | Degree(g[2]) le degN };
+print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+                        if exists{ g : g in gens_E | Degree(g[2]) eq degN } then
+                        // I don't think this can happen at this point, but it is a very cheap check.
+print "????????????";
+                            E:=N;
+//                        elif forall{ g : g in gens_E | IsNormal(RamifiedRepresentation(LocalField(Qp,g[2])))} then
+                        // normal case: this might take more time to test, but we want to avoid using sub as much as possible
+                        // in order to escape Magma Internal Error
+//                            E:=SplittingField( &*[ g[2] : g in gens_E ]);
+                        else
+print ".............";
+                            E:=RamifiedRepresentation(sub<N0|[g[1] : g in gens_E]>);
+                        end if;
+                        vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
+                    end if;
                 end if;
-                vprint ResRefCond : "pAdicReflexField : creating subfield : ...done";
                 vprint ResRefCond : "pAdicReflexField : end";
                 PHI`pAdicReflexField:=E;
             catch e
@@ -643,8 +693,8 @@ end intrinsic;
     // very fast test
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    SetVerbose("ResRefCond",2);
-    SetAssertions(1);
+    SetVerbose("ResRefCond",0);
+    SetAssertions(2);
     PP<x>:=PolynomialRing(Integers());
     polys:=[
         (x^4-5*x^3+15*x^2-25*x+25)*(x^4+5*x^3+15*x^2+25*x+25),
@@ -735,7 +785,7 @@ end intrinsic;
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     PP<x>:=PolynomialRing(Integers());
-    SetVerbose("ResRefCond",0);
+    SetVerbose("ResRefCond",1);
     // triggering errors in ShimuraTaniyma. FIXED
     // some of this poly trigger the pari bug in nfisincl
     polys:=[
@@ -764,7 +814,7 @@ end intrinsic;
         all_cm:=AllCMTypes(Ih);
         for PHI in all_cm do
             time ShimuraTaniyama(Ih,PHI);
-            time IsResidueReflexFieldEmbeddable(Ih,PHI);
+            time IsResidueReflexFieldEmbeddable(Ih,PHI : MethodReflexField:="pAdic");
         end for;
     end for;
 
