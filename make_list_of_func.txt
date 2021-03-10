@@ -1,0 +1,75 @@
+/* vim: set syntax=magma : */
+
+/*
+
+    magma script to automatically create List_of_function.md 
+
+*/
+
+
+    clean:=function(str0)
+    // removes "\n" and " " frome the begininig and the end of the string;
+        str:=str0;
+        for i in [1,2] do
+            while str[#str] in {"\n"," "} do
+                Prune(~str);
+            end while;
+            str:=Reverse(str);
+        end for;
+        return str;
+    end function;
+
+    find_next:=function(inp,pos,str);
+        //find the next occurence in inp of str. returns returns the position of the character right after str.
+        // if Eof is reached returns 0;
+        assert pos gt 0;
+        if pos eq #inp then
+            return 0;
+        end if;
+        while inp[pos] ne str[1] do
+            pos+:=1;
+            if pos eq #inp then
+                return 0;
+            end if;
+        end while;
+        n:=#str-1;
+        while not inp[pos..pos+n] eq str do
+            if pos+n+1 gt #inp then
+                return 0;
+            end if;
+            pos +:=1;
+        end while;
+        return pos+n+1;
+    end function;
+
+    find_next_intrinsic:=function(inp,pos)
+    // returns name, descr, pos
+    // 0 if Eof
+        assert pos gt 0;
+        name_in:=find_next(inp,pos,"intrinsic");
+        if name_in eq 0 then return "","",0; end if; //we hit the Eof
+        name_out:=find_next(inp,name_in,"\n")-2;
+        name:=inp[name_in..name_out];
+        name:=clean(name);
+        desc_in:=find_next(inp,name_out,"{");
+        desc_out:=find_next(inp,desc_in,"}")-2;
+        desc:=clean(inp[desc_in..desc_out]);
+        end_int:=find_next(inp,desc_out+1,"intrinsic");
+        return name,desc,end_int; 
+    end function;
+    
+    Pipe("mv List_of_functions.md List_of_functions.md.bkp","");
+    out_file:="List_of_functions.md";
+    inp:=Read("ResRefCond.m");
+    out:="";
+    pos:=1;
+    repeat
+        name,desc,pos:=find_next_intrinsic(inp,pos);
+        if pos ne 0 then
+            out cat:="`" cat name cat "`\n\n" cat "`" cat desc cat "`\n\n";
+        end if;
+    until pos eq 0;
+    fprintf out_file,"List of functions:\n--\n\n\n" cat out;
+     
+
+

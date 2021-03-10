@@ -26,9 +26,11 @@ The main intrinsics are:
 - `ResidualReflexCondition(AVh,PHI)` : given an isogeny class AVh and a CM-type PHI returns whether PHI satisfies the residual reflex conditon (RRC). 
 - `ResidualReflexCondition(AVh)` : given an isogeny class AVh returns the sequence of CM-types that satisfy RRC.
 
-Moreover there are the auxiliary intrinsics `RationalSplittingField`, `pAdicSplittingField`, `EmbeddingOfSplittingFields` and `ComplexRoots`. For the description of those and more details in general, we refer to the file itself.
+The package provides several auxiliary intrinsics, including `RationalSplittingField`, `pAdicSplittingField`, `EmbeddingOfSplittingFields` and `ComplexRoots`, that allow to perform intermediate computations. Severeal computations can be performed using different methods. 
 
-In the file `examples.txt` there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions and intrisics to compute isomorphism classes and principal polarizations.
+For complete complete descriptions and more details we refer to the [`List of functions`](https://github.com/stmar89/PolsAbVarFpCanLift/List_of_functions.md).
+
+In the file [`examples.txt`](https://github.com/stmar89/PolsAbVarFpCanLift/examples.txt) there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions and intrisics to compute isomorphism classes and principal polarizations.
 
 Future Plans
 --
