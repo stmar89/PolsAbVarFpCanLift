@@ -70,7 +70,7 @@
     repeat
         name,name_2,desc,pos:=find_next_intrinsic(inp,pos);
         if pos ne 0 then
-            out cat:="<pre>\n<b>" cat name cat "<\b>" cat name_2 cat "\n<\pre>\n\n" cat "*" cat desc cat "*\n\n";
+            out cat:="<pre>\n<b>" cat name cat "<\\b>" cat name_2 cat "\n<\\pre>\n\n" cat "*" cat desc cat "*\n\n";
         end if;
     until pos eq 0;
     fprintf out_file,"# List of functions\n in ResRefCond.m:\n--\n\n" cat out;
