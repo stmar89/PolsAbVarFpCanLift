@@ -43,30 +43,34 @@
     end function;
 
     find_next_intrinsic:=function(inp,pos)
-    // returns name, descr, pos
+    // returns name,name_2,descr, pos
     // 0 if Eof
         assert pos gt 0;
         name_in:=find_next(inp,pos,"intrinsic");
-        if name_in eq 0 then return "","",0; end if; //we hit the Eof
-        name_out:=find_next(inp,name_in,"\n")-2;
+        if name_in eq 0 then return "","","",0; end if; //we hit the Eof
+        name_out:=find_next(inp,name_in,"(")-1;
         name:=inp[name_in..name_out];
         name:=clean(name);
+        end_name:=find_next(inp,name_out,"\n")-2;
+        name_2:=clean(inp[name_out+1..end_name]);
         desc_in:=find_next(inp,name_out,"{");
         desc_out:=find_next(inp,desc_in,"}")-2;
         desc:=clean(inp[desc_in..desc_out]);
         end_int:=find_next(inp,desc_out+1,"intrinsic");
-        return name,desc,end_int; 
+        return name,name_2,desc,end_int; 
     end function;
-    
-    Pipe("mv List_of_functions.md List_of_functions.md.bkp","");
+    try    
+        Pipe("mv List_of_functions.md List_of_functions.md.bkp",""); //if it already exists
+    catch e;
+    end try;
     out_file:="List_of_functions.md";
     inp:=Read("ResRefCond.m");
     out:="";
     pos:=1;
     repeat
-        name,desc,pos:=find_next_intrinsic(inp,pos);
+        name,name_2,desc,pos:=find_next_intrinsic(inp,pos);
         if pos ne 0 then
-            out cat:="`" cat name cat "`\n\n" cat "*" cat desc cat "*\n\n";
+            out cat:="`*" cat name cat "*" cat name_2 cat "`\n\n" cat "*" cat desc cat "*\n\n";
         end if;
     until pos eq 0;
     fprintf out_file,"# List of functions\n in ResRefCond.m:\n--\n\n" cat out;
