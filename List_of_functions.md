@@ -2,7 +2,7 @@
  in ResRefCond.m:
 --
 
-`**RationalSplittingField**(AVh::IsogenyClassFq : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100) -> FldNum,SeqEnum,Map`
+`__RationalSplittingField__(AVh::IsogenyClassFq : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100) -> FldNum,SeqEnum,Map`
 
 *Returns the splitting field over Q of the Weil polynomial of the isogeny class together with the roots and an 'approximate' embedding into the Complex numbers (used internally). The precision of the codomain of the embedding is set by the vararg MinComplexPrecision.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation is outsourced to Pari or not.*
