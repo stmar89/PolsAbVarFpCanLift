@@ -215,3 +215,46 @@
         end for;
     end for;
 
+    "by looking at the indexes we deduce the only order in \mathcal{S} is O";
+    S:=O;
+    US,uS:=UnitGroup2(S);
+    USr:=TotallyRealUnitGroup(S);
+    gens_USr:=[USr.i@uS : i in [1..Ngens(USr)]]; 
+    for T in Reverse(Setseq(oo)) do
+        UT,uT:=UnitGroup2(T);
+        aut:=#TorsionSubgroup(UT);
+        conj:=T eq ComplexConjugate(T);
+        if conj then 
+            Tau:=[ u@uT : u in Transversal(UT,sub<UT|[ UT.i*(ComplexConjugate(UT.i@uT))@@uT : i in [1..Ngens(UT)] ]>)];
+            test_cond2:=forall{ g : g in gens_USr | exists{ u : u in Tau | IsTotallyRealPositive(g/u) }};
+        else
+            test_cond2:="N/A";
+        end if;
+        printf "\nindex = %o\t aut = %o\tconj stable =%o\tcond 2 =%o",Index(O,T),aut,conj,test_cond2;
+    end for;
+
+    for T in Reverse(Setseq(oo)) do 
+        //OneIdeal(T) eq ideal<T|ZBasis(Conductor(T)) cat [1]>;
+        _,g:=IsPrincipal(O!Conductor(T));
+        g:=Eltseq(g);
+        "$ \\Z + (" cat &cat[ g[c] ne 0 select Sprint(g[c]) cat "F^" cat Sprint(c-1) cat "+" else "" : c in [1..#g]] 
+            cat ")\\cO_L $";
+    end for;
+    T:=Reverse(Setseq(oo))[5];
+    _,g:=IsPrincipal(O!Conductor(T));
+    g;
+
+
+    for T in Reverse(Setseq(oo)) do
+        UT,uT:=UnitGroup2(T);
+        aut:=#TorsionSubgroup(UT);
+        conj:=T eq ComplexConjugate(T);
+        if conj then 
+            Tau:=[ u@uT : u in Transversal(UT,sub<UT|[ UT.i*(ComplexConjugate(UT.i@uT))@@uT : i in [1..Ngens(UT)] ]>)];
+            test_cond2:=forall{ g : g in gens_USr | exists{ u : u in Tau | IsTotallyRealPositive(g/u) }};
+        else
+            test_cond2:="N/A";
+        end if;
+        printf "\n& %o & %o & %o &",Index(O,T),conj,test_cond2;
+    end for;
+

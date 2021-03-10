@@ -105,11 +105,12 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : MethodRationalSplittingFi
         AVh`RationalSplittingField:=<M,rtsM,map>;
     end if;
     if MinComplexPrecision gt Precision(Codomain(AVh`RationalSplittingField[3])) then
+        M,rtsM,_:=Explode(AVh`RationalSplittingField);
         vprint ResRefCond : "RationalSplittingField: Increasing the precision of the Complex Root : start ...";
-        vtime ResRefCond : rtMCC:=Roots(DefiningPolynomial(AVh`RationalSplittingField[1]),ComplexField(MinComplexPrecision))[1,1];
+        vtime ResRefCond : rtMCC:=Roots(DefiningPolynomial(M),ComplexField(MinComplexPrecision))[1,1];
         map:=hom<M->ComplexField(MinComplexPrecision) | [ rtMCC ] >;
         vprint ResRefCond : "RationalSplittingField: Increasing the precision of the Complex Root : ... done";
-        AVh`RationalSplittingField[3]:=map;
+        AVh`RationalSplittingField:=<M,rtsM,map>;
     end if;
     return Explode(AVh`RationalSplittingField);
 end intrinsic;
