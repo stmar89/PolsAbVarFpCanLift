@@ -1,6 +1,6 @@
-# List of functions in ResRefCond.m:
+# List of functions
+ in ResRefCond.m:
 --
-
 
 `RationalSplittingField(AVh::IsogenyClassFq : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100) -> FldNum,SeqEnum,Map`
 
@@ -64,8 +64,8 @@
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Taniyama formula, and
-        *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
+        1) the CM-type satisfies the Shimura-Taniyama formula, and
+        2) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.*
@@ -77,8 +77,8 @@
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
     Recall that a CMType PHI satisfies RRC if: 
-        *) the CM-type satisfies the Shimura-Taniyama formula, and
-        *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
+        1) the CM-type satisfies the Shimura-Taniyama formula, and
+        2) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
     The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.*

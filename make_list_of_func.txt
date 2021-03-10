@@ -69,7 +69,7 @@
             out cat:="`" cat name cat "`\n\n" cat "*" cat desc cat "*\n\n";
         end if;
     until pos eq 0;
-    fprintf out_file,"# List of functions in ResRefCond.m:\n--\n\n\n" cat out;
+    fprintf out_file,"# List of functions\n in ResRefCond.m:\n--\n\n" cat out;
      
     "done";
     quit;
