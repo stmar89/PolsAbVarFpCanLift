@@ -48,10 +48,10 @@
         assert pos gt 0;
         name_in:=find_next(inp,pos,"intrinsic");
         if name_in eq 0 then return "","","",0; end if; //we hit the Eof
-        name_out:=find_next(inp,name_in,"(")-1;
+        name_out:=find_next(inp,name_in,"(")-2;
         name:=inp[name_in..name_out];
         name:=clean(name);
-        end_name:=find_next(inp,name_out,"\n")-2;
+        end_name:=find_next(inp,name_out+1,"\n")-2;
         name_2:=clean(inp[name_out+1..end_name]);
         desc_in:=find_next(inp,name_out,"{");
         desc_out:=find_next(inp,desc_in,"}")-2;
@@ -70,7 +70,7 @@
     repeat
         name,name_2,desc,pos:=find_next_intrinsic(inp,pos);
         if pos ne 0 then
-            out cat:="`*" cat name cat "*" cat name_2 cat "`\n\n" cat "*" cat desc cat "*\n\n";
+            out cat:="<pre>\n<b>" cat name cat "<\b>" cat name_2 cat "<\pre>\n\n" cat "*" cat desc cat "*\n\n";
         end if;
     until pos eq 0;
     fprintf out_file,"# List of functions\n in ResRefCond.m:\n--\n\n" cat out;
