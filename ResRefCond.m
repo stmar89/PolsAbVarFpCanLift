@@ -677,7 +677,6 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : Minp
     MinpAdicPrecision is the minimum precision to construct the p-adic splitting field (see below).
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
-
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
@@ -699,7 +698,6 @@ intrinsic ResidualReflexCondition(AVh::IsogenyClassFq : MinpAdicPrecision:=30 , 
     MinpAdicPrecision is the minimum precision to construct the p-adic splitting field (see below).
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
-
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.

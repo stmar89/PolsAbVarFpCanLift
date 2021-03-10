@@ -1,87 +1,85 @@
-List of functions:
+# List of functions in ResRefCond.m:
 --
 
 
 `RationalSplittingField(AVh::IsogenyClassFq : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100) -> FldNum,SeqEnum,Map`
 
-`Returns the splitting field over Q of the Weil polynomial of the isogeny class together with the roots and an 'approximate' embedding into the Complex numbers (used internally). The precision of the codomain of the embedding is set by the vararg MinComplexPrecision.
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation is outsourced to Pari or not.`
+*Returns the splitting field over Q of the Weil polynomial of the isogeny class together with the roots and an 'approximate' embedding into the Complex numbers (used internally). The precision of the codomain of the embedding is set by the vararg MinComplexPrecision.
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation is outsourced to Pari or not.*
 
 `PowersOfRationalRoots(AVh::IsogenyClassFq) -> Tup`
 
-`For each root FM of WeilPolynomial(AVh) in the RationalSplittingField(AVh) it returns a tuple with the powers of FM and the factor of h of which FM is a root of.`
+*For each root FM of WeilPolynomial(AVh) in the RationalSplittingField(AVh) it returns a tuple with the powers of FM and the factor of h of which FM is a root of.*
 
 `pAdicSplittingField(AVh::IsogenyClassFq : MinpAdicPrecision:=30 ) -> FldPad`
 
-`Returns the splitting field as FldPad over Qp of the Weil polynomial of the isogeny class.
-    The vararg MinpAdicPrecision sets the minimal precision.`
+*Returns the splitting field as FldPad over Qp of the Weil polynomial of the isogeny class.
+    The vararg MinpAdicPrecision sets the minimal precision.*
 
 `EmbeddingOfSplittingFields(AVh::IsogenyClassFq : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari", MinComplexPrecision:=100) -> Map , SeqEnum`
 
-`An embedding from RationalSplittingField to pAdicSplittingField, together with the images of the roots of h.
+*An embedding from RationalSplittingField to pAdicSplittingField, together with the images of the roots of h.
     The vararg MinpAdicPrecision sets the minimal precision for the construction of the pAdicSplittingField.
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.`
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.*
 
 `ComplexRoots(AVh::IsogenyClassFq , PHI::AlgAssCMType : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> SeqEnum`
 
-`Returns a sequence containing the powers of g=Dimension(AVh) roots of h=WeilPolynomial(AVh) in the M=RationalSplittingField(AVh).
+*Returns a sequence containing the powers of g=Dimension(AVh) roots of h=WeilPolynomial(AVh) in the M=RationalSplittingField(AVh).
     The precision of the embedding of M in to the complex numbers is set by the vararg MinComplexPrecision.
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.`
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.*
 
 `ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari" ) -> BoolElt`
 
-`Returns wheter a CM-type satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.`
+*Returns wheter a CM-type satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.*
 
 `RationalReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> BoolElt`
 
-`Returns the reflex field associated to the CM-type as a subfield of M=RationalSplittingField.
+*Returns the reflex field associated to the CM-type as a subfield of M=RationalSplittingField.
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.`
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.*
 
 `LocalFieldOverPrimeField(N::FldPad) -> RngLocA,Map`
 
-`Given a local field N of type FldPad returns the isomorphic RngLocA over the PrimeField together with an isomorphism.`
+*Given a local field N of type FldPad returns the isomorphic RngLocA over the PrimeField together with an isomorphism.*
 
 `pAdicReflexField(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30, MethodRationalSplittingField:="Pari", MinComplexPrecision:=100 ) -> FldPad`
 
-`Returns the pAdic reflex field associated to the CM-type. 
+*Returns the pAdic reflex field associated to the CM-type. 
     It is created as a compositum of the fields generated by the single generators.
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
-    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.`
+    The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.*
 
 `IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30, MethodRationalSplittingField:="Pari", MethodReflexField:="pAdicEarlyExit", MinComplexPrecision:=100) -> BoolElt`
 
-`Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
+*Returns the if the residue field of reflex field associated to the CM-type can be embedded in Fq=FiniteField(AVh).
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field M and the roots is outsourced to Pari or not.
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
-    The vararg MethodReflexField can be either "pAdic", "pAdicEarlyExit" or "Rational" and decides whether the reflex field is computed as a subfield of the pAdicSplittingField or the RationalSplittingField.`
+    The vararg MethodReflexField can be either "pAdic", "pAdicEarlyExit" or "Rational" and decides whether the reflex field is computed as a subfield of the pAdicSplittingField or the RationalSplittingField.*
 
 `ResidualReflexCondition(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari", MethodReflexField:="pAdicEarlyExit" , MinComplexPrecision:=100) -> BoolElt`
 
-`It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
+*It returns whether the CMType PHI of the isogeny class AVh satisfies the Residue Reflex Condition (RRC). 
     MinpAdicPrecision is the minimum precision to construct the p-adic splitting field (see below).
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
-
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
-    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.`
+    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.*
 
 `ResidualReflexCondition(AVh::IsogenyClassFq : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari", MethodReflexField:="pAdicEarlyExit", MinComplexPrecision:=100 ) -> SeqEnum[AlgAssCMType]`
 
-`It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
+*It returns the sequence of CMTypes of the isogeny class AVh that satisfy the Residue Reflex Condition (RRC). 
     MinpAdicPrecision is the minimum precision to construct the p-adic splitting field (see below).
     The varg MinComplexPrecision determines the precision of the embedding of M into the complex numbers.
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
-
     Recall that a CMType PHI satisfies RRC if: 
         *) the CM-type satisfies the Shimura-Taniyama formula, and
         *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
     We build create Q and Qp-splitting field of the Weil polynomil and hence a bijection between complex and p-adic roots. 
     This allow us to do the tests in the p-adic splitting field, increasing speed.
-    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.`
+    The intermediate data is recorded in the attribute RRC_data. See above for a detailed description.*
 
