@@ -65,6 +65,10 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : MethodRationalSplittingFi
                                                          // Speeds up the computation
                                                          // Note: nfisincl is vastly faster than nffactor
                 vtime ResRefCond : s := Pipe("gp -q -D timer=0", cmd);
+                //vtime ResRefCond : s := Pipe("sage -gp -q -D timer=0", cmd); // Pipe() doesn't load the .bash_alias file,
+                                                                               // hence on saint-germain I keep using the old version
+                                                                               // of gp with a bugged nfisincl.
+                                                                               // Uncomment this line to use the most uptodte version
                 s := eval("<" cat s[2..#s-2] cat ">");
                 M:=NumberField(Parent(h)!s[1]);
                 vprintf ResRefCond,2: "s[2] = %o\n",s[2];
@@ -99,7 +103,7 @@ intrinsic RationalSplittingField(AVh::IsogenyClassFq : MethodRationalSplittingFi
         until go;
         vprint ResRefCond : "RationalSplittingField: checking output : start ...";
         vtime ResRefCond : assert forall{ r : r in rtsM | Abs(Evaluate(h,map(r))) lt 10^test_prec};
-                                // Pari nfisincl is bugged for certain polys.
+                                // Pari nfisincl is bugged for certain polys. seems fixed in gp 2.11.4
         vprint ResRefCond : "RationalSplittingField: checking output : ... done";
         vprint ResRefCond : "RationalSplittingField: end";
         AVh`RationalSplittingField:=<M,rtsM,map>;
@@ -854,14 +858,14 @@ end intrinsic;
     PP<x>:=PolynomialRing(Integers());
     SetVerbose("ResRefCond",1);
     // triggering errors in ShimuraTaniyma. FIXED
-    // some of this poly trigger the pari bug in nfisincl
+    // some of this poly trigger the pari bug in nfisincl. fixed in gp 2.11.4
     polys:=[
-        // x^8 - x^6 + 12*x^4 - 9*x^2 + 81, // Pari bug in nfisincl
+        // x^8 - x^6 + 12*x^4 - 9*x^2 + 81, // Pari bug in nfisincl. fixed in gp 2.11.4
         x^8 - x^7 - 3*x^5 + 18*x^4 - 9*x^3 - 27*x + 81,
         x^8 - x^7 + x^6 - 12*x^4 + 9*x^2 - 27*x + 81,
         x^8 - x^7 + 3*x^6 + 27*x^2 - 27*x + 81,
         x^8 - x^7 + 3*x^6 - 9*x^5 + 9*x^4 - 27*x^3 + 27*x^2 - 27*x + 81,
-        // x^8 + 2*x^6 + 3*x^4 + 18*x^2 + 81, // Pari bug in nfisincl
+        // x^8 + 2*x^6 + 3*x^4 + 18*x^2 + 81, // Pari bug in nfisincl. fixed in gp 2.11.4
         x^8 + 2*x^6 + 18*x^4 + 18*x^2 + 81,
         x^8 - 2*x^7 + 3*x^6 + 27*x^2 - 54*x + 81,
         x^8 - 2*x^7 + 3*x^6 - 9*x^5 + 18*x^4 - 27*x^3 + 27*x^2 - 54*x + 81,
