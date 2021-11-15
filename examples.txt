@@ -15,7 +15,8 @@
 */
 
 /////////////////////////////////
-// Example 5.10
+// Almost Ordinary Example 
+// (not in the paper)
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -54,12 +55,8 @@
         end for;
     end for;
 
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
-
 /////////////////////////////////
-// Example 5.11
+// Example 5.10
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -103,7 +100,7 @@
     end for;
 
 /////////////////////////////////
-// Example 5.12
+// Example 5.11
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -131,7 +128,7 @@
             [ IsResidueReflexFieldEmbeddable(AVh,PHI) : PHI in AllCMTypes(AVh) ];
 
 /////////////////////////////////
-// Example 5.13
+// Example 5.12
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
@@ -180,7 +177,7 @@
     end for;
 
 /////////////////////////////////
-// Example 5.14
+// Example 5.13
 /////////////////////////////////
 
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
