@@ -32,6 +32,8 @@ For complete complete descriptions and more details we refer to the [`List of fu
 
 In the file [`examples.txt`](https://github.com/stmar89/PolsAbVarFpCanLift/blob/main/examples.txt) there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions and intrisics to compute isomorphism classes and principal polarizations.
 
+The file [`additional_examples.pdf`](https://github.com/stmar89/PolsAbVarFpCanLift/blob/main/additional_examples.pdf) contains cumulative tables of computations for squarefree isogeny classes over small finite fields of small dimension.
+
 Future Plans
 --
 Eventually this packages will become a submodule of [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq) and the functionalities will be included in the correspoding intrinsic.
