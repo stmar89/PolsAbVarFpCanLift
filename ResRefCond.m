@@ -291,7 +291,7 @@ end intrinsic;
 // Shimura-Taniyama  //
 ///////////////////////    
 
-intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari" ) -> BoolElt
+intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrecision:=30 , MethodRationalSplittingField:="Pari" , MinComplexPrecision:=100 ) -> BoolElt
 {   
     Returns wheter a CM-type satisfies the Shimura-Taniyama formula for the Forbenius of the Isogeny class AVh
     The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.
@@ -304,7 +304,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrec
             repeat
                 go:=true;
                 try
-                    eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec, MethodRationalSplittingField:=MethodRationalSplittingField );
+                    eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec, MethodRationalSplittingField:=MethodRationalSplittingField , MinComplexPrecision:=MinComplexPrecision );
                     N:=Codomain(eps); 
                     // pre-computation, does not depend on PHI. Should be computed only once.
                     vprint ResRefCond : "ShimuraTaniyama : precomputation : start ...";
@@ -363,11 +363,11 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgAssCMType : MinpAdicPrec
                 end try;
             until go;
         else
-            eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , MethodRationalSplittingField:=MethodRationalSplittingField);
+            eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=prec , MethodRationalSplittingField:=MethodRationalSplittingField, MinComplexPrecision:=MinComplexPrecision);
             vals_F, vals_q, RHS_D_P, hp_fac := Explode(AVh`ShimuraTaniyamaPrecomputation);
         end if;
-        M,rtsM:=RationalSplittingField(AVh);
-        rtsM_PHI:=ComplexRoots(AVh,PHI : MethodRationalSplittingField:=MethodRationalSplittingField );
+        M,rtsM:=RationalSplittingField(AVh);//already computed
+        rtsM_PHI:=ComplexRoots(AVh,PHI : MethodRationalSplittingField:=MethodRationalSplittingField , MinComplexPrecision:=MinComplexPrecision);
         eps_rtsM_PHI:=[ eps_rtsM[Index(rtsM,r[1,2])] : r in rtsM_PHI ]; 
         ////////////////----Shimura-Taniyama----///////////////////
         st_tests:=[];
