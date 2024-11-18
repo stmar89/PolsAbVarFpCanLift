@@ -293,7 +293,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgEtQCMType : MinpAdicPrec
                     assert assigned AVh`RationalSplittingField;
                     M,rtsM:=RationalSplittingField(AVh); // we do not use Domain(eps), since we need the roots as well.
                     p_fac_h:=[ g[1] : g in Factorization(WeilPolynomial(AVh),PrimeField(N))];
-                    L:=UniverseAlgebra(AVh);
+                    L:=DeligneAlgebra(AVh);
                     fac_q_L:=Factorization(q*MaximalOrder(L));
                     primes:=[ P[1] : P in fac_q_L ];
                     vprintf ResRefCond : "ShimuraTaniyama : precomputation : #primes %o\n",#primes;
