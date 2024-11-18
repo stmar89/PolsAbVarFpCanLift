@@ -9,10 +9,8 @@ Please send comments and bug reports to `stefano.marseglia89@gmail.com`.
 
 Details
 --
-This package requires [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq).
+This package requires [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq) and its dependencies.
 
-The file `AlmOrd.m` contains the function `overorders_maximal_at_ss` that given as input an `IsogenyClassFq` of almost-ordinary squarefree abelian varieties in odd characteristic returns the over-orders of ZZ[F,V] which are maximal at the supersingular part of the endomorphism algebra. These and only these are endomorphism rings of abelian varieties in such an isogeny class.
-See Oswal-Shankar (below) for more details.
 
 The file `ResRefCond.m` contains code to check wheter a CM-type satisfies the Shimura-Taniyama formula and the Residual Reflex Condition (RRC). Recall that a CMType PHI satisfies RRC if: 
     *) the CM-type satisfies the Shimura-Taniyama formula, and
@@ -33,6 +31,12 @@ For complete complete descriptions and more details we refer to the [`List of fu
 In the file [`examples.txt`](https://github.com/stmar89/PolsAbVarFpCanLift/blob/main/examples.txt) there is the code for the examples in our paper. Such code is also intended as a guide on how to use the various functions and intrisics to compute isomorphism classes and principal polarizations.
 
 The file [`additional_examples.pdf`](https://github.com/stmar89/PolsAbVarFpCanLift/blob/main/additional_examples.pdf) contains cumulative tables of computations for squarefree isogeny classes over small finite fields of small dimension.
+
+Legacy (kept for retrocompatibility)
+--
+The content of the file `AlmOrd.m` has been superseeded by the new code contained in [`IsomClAbVarFqCommEndAlg`](https://github.com/stmar89/IsomClAbVarFqCommEndAlg). 
+The file `AlmOrd.m` contains the function `overorders_maximal_at_ss` that given as input an `IsogenyClassFq` of almost-ordinary squarefree abelian varieties in odd characteristic returns the over-orders of ZZ[F,V] which are maximal at the supersingular part of the endomorphism algebra. These and only these are endomorphism rings of abelian varieties in such an isogeny class. 
+See Oswal-Shankar (below) for more details.
 
 Future Plans
 --
