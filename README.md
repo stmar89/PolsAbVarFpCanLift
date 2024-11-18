@@ -11,7 +11,6 @@ Details
 --
 This package requires [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq) and its dependencies.
 
-
 The file `ResRefCond.m` contains code to check wheter a CM-type satisfies the Shimura-Taniyama formula and the Residual Reflex Condition (RRC). Recall that a CMType PHI satisfies RRC if: 
     *) the CM-type satisfies the Shimura-Taniyama formula, and
     *) the associated reflex field has residue field that can be realized as a subfield of the field of definition of AVh.
@@ -37,10 +36,6 @@ Legacy (kept for retrocompatibility)
 The content of the file `AlmOrd.m` has been superseeded by the new code contained in [`IsomClAbVarFqCommEndAlg`](https://github.com/stmar89/IsomClAbVarFqCommEndAlg). 
 The file `AlmOrd.m` contains the function `overorders_maximal_at_ss` that given as input an `IsogenyClassFq` of almost-ordinary squarefree abelian varieties in odd characteristic returns the over-orders of ZZ[F,V] which are maximal at the supersingular part of the endomorphism algebra. These and only these are endomorphism rings of abelian varieties in such an isogeny class. 
 See Oswal-Shankar (below) for more details.
-
-Future Plans
---
-Eventually this packages will become a submodule of [`stmar89/AbVarFq`](https://github.com/stmar89/AbVarFq) and the functionalities will be included in the correspoding intrinsic.
 
 References
 --

@@ -19,6 +19,7 @@
 // (not in the paper)
 /////////////////////////////////
 
+//TODO update me after fixing AlmOrd.m
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
@@ -59,6 +60,7 @@
 // Example 5.10
 /////////////////////////////////
 
+//TODO update me after fixing AlmOrd.m
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
@@ -103,8 +105,11 @@
 // Example 5.11
 /////////////////////////////////
 
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    AttachSpec("~/AbVarFq/spec");
+    AttachSpec("~/AlgEt/spec");
+    AttachSpec("~/AlgEt/specMod");
+    AttachSpec("~/AlgEt/specMtrx");
+    Attach("~/PolsAbVarFpCanLift/ResRefCond.m");
    
     _<x>:=PolynomialRing(Integers());
     h1:=x^2+3;
@@ -131,8 +136,11 @@
 // Example 5.12
 /////////////////////////////////
 
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    AttachSpec("~/AbVarFq/spec");
+    AttachSpec("~/AlgEt/spec");
+    AttachSpec("~/AlgEt/specMod");
+    AttachSpec("~/AlgEt/specMtrx");
+    Attach("~/PolsAbVarFpCanLift/ResRefCond.m");
    
     _<x>:=PolynomialRing(Integers());
     f:=x^6 - x^5 + 6*x^4 - 6*x^3 + 18*x^2 - 9*x + 27;
@@ -146,14 +154,14 @@
     O:=MaximalOrder(L);
     "there is only one non-maximal order of index coprime to p"; 
     S:=[T : T in oo | IsCoprime(Index(O,T),q) ][1];
-    US,uS:=UnitGroup2(S);
+    US,uS:=UnitGroup(S);
     USr:=TotallyRealUnitGroup(S);
     gens_USr:=[USr.i@uS : i in [1..Ngens(USr)]]; 
     for T in oo do
         "index =",Index(O,T);
         "IsGorenstein =",IsGorenstein(T);
         "# classes with End=T =",#PicardGroup(T);
-        UT,uT:=UnitGroup2(T);
+        UT,uT:=UnitGroup(T);
         UTr:=TotallyRealUnitGroup(T); 
         "does Theorem 5.5.1 hold?",USr subset UTr;
         Tau:=[ u@uT : u in Transversal(UT,sub<UT|[ UT.i*(ComplexConjugate(UT.i@uT))@@uT : i in [1..Ngens(UT)] ]>)];
@@ -180,8 +188,11 @@
 // Example 5.13
 /////////////////////////////////
 
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
+    AttachSpec("~/AbVarFq/spec");
+    AttachSpec("~/AlgEt/spec");
+    AttachSpec("~/AlgEt/specMod");
+    AttachSpec("~/AlgEt/specMtrx");
+    Attach("~/PolsAbVarFpCanLift/ResRefCond.m");
    
     _<x>:=PolynomialRing(Integers());
     h:=x^8+16;
@@ -201,11 +212,11 @@
 
     "by looking at the indices we deduce the only order in \mathcal{S} is O, that is, we can only ensure that we can canonically lift an abelin variety with maximal endomorphism ring.";
     S:=O;
-    US,uS:=UnitGroup2(S);
+    US,uS:=UnitGroup(S);
     USr:=TotallyRealUnitGroup(S);
     gens_USr:=[USr.i@uS : i in [1..Ngens(USr)]]; 
     for T in Reverse(Setseq(oo)) do
-        UT,uT:=UnitGroup2(T);
+        UT,uT:=UnitGroup(T);
         conj:=T eq ComplexConjugate(T);
         if conj then 
             Tau:=[ u@uT : u in Transversal(UT,sub<UT|[ UT.i*(ComplexConjugate(UT.i@uT))@@uT : i in [1..Ngens(UT)] ]>)];
