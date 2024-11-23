@@ -19,27 +19,39 @@
 // (not in the paper)
 /////////////////////////////////
 
-//TODO update me after fixing AlmOrd.m
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
+    AttachSpec("~/AlgEt/spec");
+    AttachSpec("~/AlgEt/specMod");
+    AttachSpec("~/AlgEt/specMtrx");
+    AttachSpec("~/AbVarFq/spec");
+    AttachSpec("~/IsomClAbVarFqCommEndAlg/spec");
+    Attach("~/PolsAbVarFpCanLift/ResRefCond.m");
+    load "~/PolsAbVarFpCanLift/AlmOrd.m"; 
 
     _<x>:=PolynomialRing(Integers());
     f:=x^6 - 11*x^5 + 65*x^4 - 240*x^3 + 585*x^2 - 891*x + 729;
-    If:=IsogenyClass(f:Check:=false);
+    If:=IsogenyClass(f);
     If;
+    pRank(If),Dimension(If);
     q:=FiniteField(If);
     R:=ZFVOrder(If);
     L:=Algebra(R);
     oo:=FindOverOrders(R);
-    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If);
+    oo_max_at_ss,MM:=overorders_maximal_at_ss(If);
+    assert #MM eq 1;
     printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
-            and hence are Endomrophism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
-    O:=MaximalOrder(L);
+            and hence are Endomorphism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
 
-    iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
-    printf "There are %o isomorphism classes of AVs\n",&+[ #I : I in iso];
-    "The isogeny class is ramified",IsRamified(Lss); 
+    O:=MaximalOrder(L);
+    indices:=[Index(O,S):S in oo_max_at_ss];
+    ParallelSort(~indices,~oo_max_at_ss);
+    Smin:=oo_max_at_ss[#oo_max_at_ss];
+    // Smin is the smallest End
+    iso:=ICM(Smin);
+    // in order to use Deligne Modules we overwrite the pRank attribute
+    If`pRank:=Dimension(If);
+    iso:=[ AbelianVarietyFromDeligneModule(If,R!!idl):idl in iso ];
+    printf "There are %o isomorphism classes of AVs\n",#iso;
+    "Is the isogeny class ramified at the unique supersingular (i.e. local-local) place of Q[F]?",RamificationIndex(MM[1]) gt 1;
     "Hence there is a 1-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
@@ -47,12 +59,15 @@
     assert #CM_ST eq 2;
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula. Both will give the same output (in terms of polarizations).";
     PHI:=CM_ST[1];
-    for isoS in iso do
-        "new endomorphism ring";
-        for I in isoS do
-            "\tnew isomorphism class of AVs...";
-            _,pps:=IsPrincipallyPolarized(I,PHI);
-            printf "\t... with %o principal polarizations, up to isomorphism\n",#pps;
+    for S in Reverse(oo_max_at_ss) do
+        isoS:=[ A : A in iso | EndomorphismRing(A) eq S ];
+        for isoS in iso do
+            "new endomorphism ring";
+            for I in isoS do
+                "\tnew isomorphism class of AVs...";
+                _,pps:=IsPrincipallyPolarized(I,PHI);
+                printf "\t... with %o principal polarizations, up to isomorphism\n",#pps;
+            end for;
         end for;
     end for;
 
@@ -60,7 +75,6 @@
 // Example 5.10
 /////////////////////////////////
 
-//TODO update me after fixing AlmOrd.m
     AttachSpec("~/packages_github/AbVarFq/packages.spec");
     Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
     load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
@@ -69,18 +83,22 @@
     f:=(x^2 + 9)*(x^4 - 6*x^3 + 19*x^2 - 54*x + 81);
     If:=IsogenyClass(f:Check:=false);
     If;
+    pRank(If),Dimension(If);
+    // in order to use Deligne Modules we overwrite the pRank attribute
+    If`pRank:=Dimension(If);
     q:=FiniteField(If);
     R:=ZFVOrder(If);
     L:=Algebra(R);
     oo:=FindOverOrders(R);
-    oo_max_at_ss,Lss:=overorders_maximal_at_ss(If);
+    oo_max_at_ss,MM:=overorders_maximal_at_ss(If);
+    assert #MM eq 1;
     printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
             and hence are Endomrophism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
     O:=MaximalOrder(L);
 
     iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
     printf "There are %o isomorphism classes of AVs\n",&+[ #I : I in iso];
-    "The isogeny class not is ramified : ",IsRamified(Lss); 
+    "Is the isogeny class ramified at the unique supersingular (i.e. local-local) place of Q[F]?",RamificationIndex(MM[1]) gt 1;
     "Hence there is a 2-1 map between AVs and ideals";
 
     all_cm:=AllCMTypes(If);
