@@ -14,6 +14,7 @@
 
 */
 
+
 /////////////////////////////////
 // Almost Ordinary Example 
 // (not in the paper)
@@ -38,8 +39,7 @@
     oo:=FindOverOrders(R);
     oo_max_at_ss,MM:=overorders_maximal_at_ss(If);
     assert #MM eq 1;
-    printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
-            and hence are Endomorphism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
+    printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part. These are Endomorphism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
 
     O:=MaximalOrder(L);
     indices:=[Index(O,S):S in oo_max_at_ss];
@@ -47,8 +47,6 @@
     Smin:=oo_max_at_ss[#oo_max_at_ss];
     // Smin is the smallest End
     iso:=ICM(Smin);
-    // in order to use Deligne Modules we overwrite the pRank attribute
-    If`pRank:=Dimension(If);
     iso:=[ AbelianVarietyFromDeligneModule(If,R!!idl):idl in iso ];
     printf "There are %o isomorphism classes of AVs\n",#iso;
     "Is the isogeny class ramified at the unique supersingular (i.e. local-local) place of Q[F]?",RamificationIndex(MM[1]) gt 1;
@@ -60,14 +58,12 @@
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula. Both will give the same output (in terms of polarizations).";
     PHI:=CM_ST[1];
     for S in Reverse(oo_max_at_ss) do
+        "new endomorphism ring";
         isoS:=[ A : A in iso | EndomorphismRing(A) eq S ];
-        for isoS in iso do
-            "new endomorphism ring";
-            for I in isoS do
-                "\tnew isomorphism class of AVs...";
-                _,pps:=IsPrincipallyPolarized(I,PHI);
-                printf "\t... with %o principal polarizations, up to isomorphism\n",#pps;
-            end for;
+        for I in isoS do
+            "\tnew isomorphism class of AVs...";
+            _,pps:=IsPrincipallyPolarized(I,PHI : CheckOrdinary:=false);
+            printf "\t... with %o principal polarizations, up to isomorphism\n",#pps;
         end for;
     end for;
 
@@ -75,17 +71,19 @@
 // Example 5.10
 /////////////////////////////////
 
-    AttachSpec("~/packages_github/AbVarFq/packages.spec");
-    Attach("~/packages_github/PolsAbVarFpCanLift/ResRefCond.m");
-    load "~/packages_github/PolsAbVarFpCanLift/AlmOrd.m"; 
+    AttachSpec("~/AlgEt/spec");
+    AttachSpec("~/AlgEt/specMod");
+    AttachSpec("~/AlgEt/specMtrx");
+    AttachSpec("~/AbVarFq/spec");
+    AttachSpec("~/IsomClAbVarFqCommEndAlg/spec");
+    Attach("~/PolsAbVarFpCanLift/ResRefCond.m");
+    load "~/PolsAbVarFpCanLift/AlmOrd.m"; 
 
     _<x>:=PolynomialRing(Integers());
     f:=(x^2 + 9)*(x^4 - 6*x^3 + 19*x^2 - 54*x + 81);
     If:=IsogenyClass(f:Check:=false);
     If;
     pRank(If),Dimension(If);
-    // in order to use Deligne Modules we overwrite the pRank attribute
-    If`pRank:=Dimension(If);
     q:=FiniteField(If);
     R:=ZFVOrder(If);
     L:=Algebra(R);
@@ -95,9 +93,13 @@
     printf "In total there are %o overorder of Z[F,V], but only %o are maximal at the supersingular part 
             and hence are Endomrophism Rings of some abelian variety in the isogene class\n",#oo,#oo_max_at_ss;
     O:=MaximalOrder(L);
-
-    iso:=[ ComputeIsomorphismClassesWithEndomorphismRing(If,S) : S in oo_max_at_ss ];
-    printf "There are %o isomorphism classes of AVs\n",&+[ #I : I in iso];
+    indices:=[Index(O,S):S in oo_max_at_ss];
+    ParallelSort(~indices,~oo_max_at_ss);
+    Smin:=oo_max_at_ss[#oo_max_at_ss];
+    // Smin is the smallest End
+    iso:=ICM(Smin);
+    iso:=[ AbelianVarietyFromDeligneModule(If,R!!idl):idl in iso ];
+    printf "There are %o isomorphism classes of AVs\n",#iso;
     "Is the isogeny class ramified at the unique supersingular (i.e. local-local) place of Q[F]?",RamificationIndex(MM[1]) gt 1;
     "Hence there is a 2-1 map between AVs and ideals";
 
@@ -107,13 +109,14 @@
     "There are 2 CM-types that satisfy the Shimura Tanyiama formula.\n
     Each fractional ideal give rise to two AVs, one per CM-Type.\n
     For each of these two CM Types and each ideal, we compute the principal polarizations.";
-    for isoS in iso do
+    for S in Reverse(oo_max_at_ss) do
         "new endomorphism ring";
+        isoS:=[ A : A in iso | EndomorphismRing(A) eq S ];
         for I in isoS do
             "\tnew ideal";
             for PHI in CM_ST do
                 "\t\tnew isomorphism class ...";
-                _,pps:=IsPrincipallyPolarized(I,PHI);
+                _,pps:=IsPrincipallyPolarized(I,PHI : CheckOrdinary:=false);
                 printf "\t\t... with %o principal polarizations, up to isomorphism\n",#pps;
             end for;
         end for;
@@ -189,13 +192,14 @@
     all_cm:=AllCMTypes(If);
     "number of CM Types satisfying RRC=",#ResidualReflexCondition(If);
     "CM types satisfying RRC (sorted as in AllCMTypes)=\n",[ PHI in ResidualReflexCondition(If) : PHI in all_cm ];
+    iso:=IsomorphismClasses(If);
     for T in oo do
         "\nindex of End =",Index(O,T);
-        for A in ComputeIsomorphismClassesWithEndomorphismRing(If,T) do
+        for A in [A:A in iso|EndomorphismRing(A) eq T] do
             "new isomorphism class";
             printf "princ. pols. for each CM-type : ";
             for PHI in all_cm do
-                _,pp:=IsPrincipallyPolarized(A,PHI);
+                _,pp:=IsPrincipallyPolarized(A,PHI : CheckOrdinary:=false);
                 printf "%o ",#pp;
             end for;
             printf "\n";
@@ -233,7 +237,7 @@
     US,uS:=UnitGroup(S);
     USr:=TotallyRealUnitGroup(S);
     gens_USr:=[USr.i@uS : i in [1..Ngens(USr)]]; 
-    for T in Reverse(Setseq(oo)) do
+    for T in Reverse(oo) do
         UT,uT:=UnitGroup(T);
         conj:=T eq ComplexConjugate(T);
         if conj then 
@@ -245,21 +249,22 @@
         printf "\nindex = %o\tconj stable =%o\tThm 5.5.2 =%o",Index(O,T),conj,test_cond2;
     end for;
 
-    "we verify that each overorder T is generated equals ZZ+(T:O) and that the conductor (T:O) is a principal O-ideal"
-    for T in Reverse(Setseq(oo)) do 
-        t1:=OneIdeal(T) eq ideal<T|ZBasis(Conductor(T)) cat [1]>;
-        t2,g:=IsPrincipal(O!Conductor(T));
+    "we verify that each overorder T is generated equals ZZ+(T:O) and that the conductor (T:O) is a principal O-ideal";
+    for T in Reverse(oo) do 
+        t1:=OneIdeal(T) eq Ideal(T,ZBasis(Conductor(T)) cat [L!1]);
+        t2,g:=IsPrincipal(O!!Conductor(T));
         printf "\nindex = %o\tT=ZZ+(T:O) ? %o\tis principal (T:O) ? %o",Index(O,T),t1,t2;
     end for;
 
-    "we compute the isomorphism classes for each over-order T: this computation takes quite a while ...";
-    for T in Reverse(Setseq(oo)) do
+    "\nwe compute the isomorphism classes for each over-order T.";
+    iso:=IsomorphismClasses(Ih);
+    for T in Reverse(oo) do
         "\nindex of End =",Index(O,T);
-        for A in ComputeIsomorphismClassesWithEndomorphismRing(Ih,T) do
+        for A in [A:A in iso|EndomorphismRing(A) eq T] do
             "new isomorphism class";
             printf "princ. pols. for each CM-type : ";
             for PHI in all_cm do
-                _,pp:=IsPrincipallyPolarized(A,PHI);
+                _,pp:=IsPrincipallyPolarized(A,PHI:CheckOrdinary:=false);
                 printf "%o ",#pp;
             end for;
             printf "\n";

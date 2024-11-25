@@ -225,8 +225,8 @@ intrinsic ComplexRoots(AVh::IsogenyClassFq , PHI::AlgEtQCMType : MethodRationalS
 {Returns a sequence containing the powers of g=Dimension(AVh) roots of h=WeilPolynomial(AVh) in the M=RationalSplittingField(AVh). The precision of the embedding of M in to the complex numbers is set by the vararg MinComplexPrecision. The vararg MethodRationalSplittingField can be either "Pari" or "Magma" and decides whether the computation of the splitting field and the roots is outsourced to Pari or not.} 
     if not assigned PHI`ComplexRoots then
         vprint ResRefCond : "ComplexRoots : start";
-        F:=FrobeniusEndomorphism(AVh)(1);
-        deg:=Degree(Parent(F));
+        F:=FrobeniusEndomorphismOnDeligneAlgebra(AVh)(1);
+        deg:=AbsoluteDimension(Parent(F));
         M,rtsM,map:=RationalSplittingField(AVh : MethodRationalSplittingField:=MethodRationalSplittingField , MinComplexPrecision:=MinComplexPrecision);
         pow_bas_L:=[F^(i-1) : i in [1..deg]];
         b:=CMPosElt(PHI);
@@ -298,7 +298,7 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgEtQCMType : MinpAdicPrec
                     primes:=[ P[1] : P in fac_q_L ];
                     vprintf ResRefCond : "ShimuraTaniyama : precomputation : #primes %o\n",#primes;
                     vals_q:=[ P[2] : P in fac_q_L ];
-                    F:=FrobeniusEndomorphism(AVh)(1);
+                    F:=FrobeniusEndomorphismOnDeligneAlgebra(AVh)(1);
                     fac_F_L:=Factorization(F*MaximalOrder(L));
                     vals_F:=[  ];
                     hp_fac:=[ ]; //will contain the p adic factors of h sorted according to the bijection with P in primes 
@@ -315,13 +315,15 @@ intrinsic ShimuraTaniyama(AVh::IsogenyClassFq , PHI::AlgEtQCMType : MinpAdicPrec
                         //      Completion seems to ignore my precision param so IsWeaklyZero doesn't seem to be working
                         // workaround
                             mLP_F:=mLP(F);
-                            is_zero:=[ Valuation(Evaluate(gp,mLP_F)) : gp in p_fac_h ];
+                            // 20241125 : the next line needed to be changed with switching to AlgEt
+                            //is_zero:=[ Valuation(Evaluate(gp,mLP_F)) : gp in p_fac_h ];
+                            is_zero:=[ Valuation(Evaluate(ChangeRing(gp,LP),mLP_F)) : gp in p_fac_h ];
                             max:=Round(0.95*Max(is_zero));
                             Pfac:=[ p_fac_h[i] : i in [1..#p_fac_h] | is_zero[i] gt max ];
                         // end workaround
                         assert #Pfac eq 1; 
                         Append(~hp_fac,Pfac[1]); // the p adic factor of h corresponding to the prime P
-                        // workaround
+                        // workaroun,LP)d
                             is_zero:=[ Valuation(Evaluate(Pfac[1],eps_rM)) : eps_rM in eps_rtsM];
                             max:=Round(0.95*Max(is_zero));
                             RHS_D:=#[ rtsM[i] : i in [1..#rtsM] | is_zero[i] gt max ];
