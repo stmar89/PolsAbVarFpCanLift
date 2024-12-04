@@ -499,11 +499,27 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgEtQCMType
         q:=FiniteField(AVh);
         p:=CharacteristicFiniteField(AVh);
         Ilog_p_q:=Ilog(p,q);
+
+        embeds_in_Fq:=function(F)
+        // given a local field F, returns whether the residue field kF of F embeds in Fq
+            if Type(F) eq FldPad then
+                return (Ilog_p_q mod AbsoluteInertiaDegree(F)) eq 0;
+            elif Type(F) eq RngLocA then
+                return (Ilog_p_q mod InertiaDegree(F)) eq 0;
+            else
+                error "type of F not recognized";
+            end if; 
+        end function;
+
+
         if MethodReflexField eq "pAdicEarlyExit" then  
             vprint ResRefCond : "IsResidueReflexFieldEmbeddable : MethodReflexField pAdicEarlyExit";
             eps,eps_rtsM:=EmbeddingOfSplittingFields(AVh : MinpAdicPrecision:=MinpAdicPrecision , MethodRationalSplittingField:=MethodRationalSplittingField , MinComplexPrecision:=MinComplexPrecision );
             N:=Codomain(eps);
-            if (Ilog(p,q)) mod Ilog(p,#ResidueClassField(Integers(N))) eq 0 then
+            if embeds_in_Fq(N) then
+                // The relfex field E is a subfield of N.
+                // So kE is a subfield of kN.
+                // If kN embeds in Fq, the same holds for kE.
                 PHI`IsResidueReflexFieldEmbeddable:=true;
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : early exit on N";
             else
@@ -521,22 +537,36 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgEtQCMType
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : computing generators : ... done";
                 vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : start...";
                 Qp:=PrimeField(N);
-                degN:=Degree(N);
+                //20241204: I think this is wrong
+                //degN:=Degree(N);
+                degN:=AbsoluteDegree(N);
+                vprintf ResRefCond : "IsResidueReflexFieldEmbeddable : degN=%o\n",degN;
                 gens_E:=[ <g,MinimalPolynomial(g,Qp)> : g in gens_E ];
                 gens_E:=[ m : m in gens_E | Degree(m[2]) gt 1];
+                // We only keep the generators that are not in Qp.
+
+                // Instead of immediately generating the reflex field E (as a subgfield of N), create a sequence
+                // of extensions of Qp by adding one generator at the time creating a chain of subfields
+                //  E1 c ... c En=E.
+                // If there exists an Ei such that kEi c Fq we stop the process.
                 if #gens_E eq 0 then
                     vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : E=Qp";
                     E:=Qp;
                     PHI`pAdicReflexField:=E;
                     PHI`IsResidueReflexFieldEmbeddable:=true;
                 elif exists{m : m in gens_E | Degree(m[2]) eq degN} then
-                vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : E=N";
+                    // There exists at least one generator that gives the whole N, so E=N.
+                    vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : E=N";
                     E:=N;
                     PHI`pAdicReflexField:=E;
-                    PHI`IsResidueReflexFieldEmbeddable:=(AbsoluteInertiaDegree(N) mod Ilog_p_q) eq 0;
+                    //20241204: This is wrong. now fixed. the same mistake occurred several times below.
+                    //PHI`IsResidueReflexFieldEmbeddable:=(AbsoluteInertiaDegree(N) mod Ilog_p_q) eq 0;
+                    PHI`IsResidueReflexFieldEmbeddable:=embeds_in_Fq(N);
                 else
                     fld_gens_E:=[ LocalField(Qp,m[2]) : m in gens_E ];
-                    if exists{ S : S in fld_gens_E | (InertiaDegree(S) mod Ilog_p_q) eq 0 } then
+                    if exists{ S : S in fld_gens_E | not embeds_in_Fq(S) } then
+                        // There exists at least a generator giving an S such that kS does not embed in Fq.
+                        // Since S is a subfield of E, then kE does not embed in Fq.
                         vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit : false on gens_E";
                         PHI`IsResidueReflexFieldEmbeddable:=false;
                     else
@@ -556,15 +586,16 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgEtQCMType
                         if #normal gt 0 then
                             pol:=normal[1,2];
                             E0:=SplittingField(pol); 
-                            if not (AbsoluteInertiaDegree(E0) mod Ilog_p_q) eq 0 then
+                            Append(~gens_added,normal[1]);
+                            if not embeds_in_Fq(E0) then
                                 PHI`IsResidueReflexFieldEmbeddable:=false;
                             else
                                 for ig->g in normal[2..#normal] do
                                     pol *:=g[2];
                                     E0:=SplittingField(pol); 
                                     Append(~gens_added,g);
-                                    is_emb:= (AbsoluteInertiaDegree(E0) mod Ilog_p_q) ;
-                                    if not is_emb eq 0 or AbsoluteDegree(E0) eq degN then
+                                    if not embeds_in_Fq(E0) or AbsoluteDegree(E0) eq degN then
+                                        // if E0 = N then we know that kE0=kN does not embed in Fq
                                         PHI`IsResidueReflexFieldEmbeddable:=false;
                                         vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate normal field";
                                         break ig;
@@ -577,15 +608,14 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgEtQCMType
                             N0,NtoN0:=LocalFieldOverPrimeField(N);
                             E1,E1toN0:=sub<N0 | [ not_normal[1,2] ]>;
                             Append(~gens_added,not_normal[1]);
-                            if not (InertiaDegree(E1) mod Ilog_p_q) eq 0 then 
+                            if not embeds_in_Fq(E1) then 
                                 PHI`IsResidueReflexFieldEmbeddable:=false;
                             else
                                 first_gen:=E1toN0(E1.1);
                                 for ig->second_gen in not_normal[2..#not_normal] do
                                     E1,E1toN0:=sub<N0 | [ first_gen,second_gen[2] ]>;
                                     Append(~gens_added,second_gen);
-                                    is_emb:= (InertiaDegree(E1) mod Ilog_p_q) ;
-                                    if not is_emb or Degree(E1) eq degN then 
+                                    if not embeds_in_Fq(E1) or AbsoluteDegree(E1) eq degN then 
                                         PHI`IsResidueReflexFieldEmbeddable:=false;
                                         vprint ResRefCond : "IsResidueReflexFieldEmbeddable : creating subfield : early exit on intermediate not normal sub field";
                                         break ig;
@@ -611,8 +641,8 @@ intrinsic IsResidueReflexFieldEmbeddable(AVh::IsogenyClassFq , PHI::AlgEtQCMType
                                 second_gen:=E1toN0(E1.1);
                                 E:=RamifiedRepresentation(sub<N0| [ first_gen,second_gen ]>);
                             end if;
-                            E:=PHI`pAdicReflexField; //this is assigned then
-                            PHI`IsResidueReflexFieldEmbeddable:=(InertiaDegree(E) mod Ilog_p_q) eq 0;
+                            PHI`pAdicReflexField:=E; //this is assigned then
+                            PHI`IsResidueReflexFieldEmbeddable:=embeds_in_Fq(E);
                         end if;
                         // #gens_added eq #gens_E then we could also assign PHI`pAdiReflexField, but we will have to gen another sub
                         // potentially causing more troubles.
