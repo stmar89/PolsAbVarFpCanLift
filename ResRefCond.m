@@ -414,6 +414,11 @@ intrinsic LocalFieldOverPrimeField(N::FldPad) -> RngLocA,Map
     degN:=AbsoluteDegree(N);
     N0:=LocalField(Qp,DefiningPolynomial(N,Qp));
     powN:=[ i gt 1 select Self(i-1)*N.1 else N!1 : i in [1..degN] ];
+    // TEST 
+    for i in [1..100] do 
+        c:=Random(Integers(N)); 
+        assert c eq &+[Flat(c)[i]*powN[i] : i in [1..#powN]];
+    end for; 
     powN:=[ Flat(b) : b in powN ];
     basN:=[ b*g : b in Basis(BaseRing(N)) , g in Basis(N) ];
     coord:=[ N0! c : c in coordinates(basN,powN)];
